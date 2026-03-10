@@ -1,0 +1,13 @@
+interface:
+  display_name: "Frontend Debug"
+  short_description: "Live browser investigation before test codification"
+  default_prompt: "Use $frontend-debug to inspect this live frontend issue, isolate the root cause, and capture concrete repro steps."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "chrome-devtools"
+      description: "Chrome DevTools MCP server for live DOM, console, network, and performance inspection"
+
+policy:
+  allow_implicit_invocation: true

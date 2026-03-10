@@ -43,6 +43,7 @@ ChatGPT / Grok / Google AI Studio などの会話を、Markdown / JSON として
 - `docs/public-bookmarklet.ja.md`
 - `docs/bookmarklet-loader.ja.md`
 - `docs/github-pages-setup.ja.md`
+- `docs/codex-cli-frontend-setup.ja.md`
 
 ## 画面キャプチャ
 
