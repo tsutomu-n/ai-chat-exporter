@@ -1,0 +1,1 @@
+javascript:(()=>{const d=document,s=d.createElement('script');s.src='https://tsutomu-n.github.io/ai-chat-exporter/ai-chat-export.min.js?v=20260310';s.async=true;s.crossOrigin='anonymous';(d.head||d.documentElement).appendChild(s)})()
