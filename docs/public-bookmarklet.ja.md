@@ -2,7 +2,7 @@
 
 ## 最初に使うファイル
 
-- `../ai-chat-export.public.oneliner.js`
+- `./ai-chat-export.public.oneliner.js`
 
 このファイルが、現在の第一推奨です。
 
@@ -50,6 +50,6 @@
 
 ブックマークで難しい場合は次を使います。
 
-- `../ai-chat-export.public.min.js`
+- `./ai-chat-export.public.min.js`
 
 DevTools の Console か Snippets で使えます。

@@ -1,55 +1,79 @@
-# AIチャット書き出し（ブックマークレット / 日本語UI）
+# AIチャット書き出し
 
-対象: ChatGPT（chatgpt.com / chat.openai.com） / Google AI Studio（aistudio.google.com, Chat画面） / Grok（grok系、x.com/i/grok）  
-形式: 標準Markdown（デフォルト） / Obsidian向け / JSON（任意）
+ChatGPT / Grok / Google AI Studio などの会話を、Markdown / JSON として保存するブックマークレットです。
 
-## 1) 使い方（最短）
-1. 下の「ブックマーク登録用（1行）」の中身を **全部コピー**
-2. ブラウザのブックマークを新規作成
-3. URL欄に貼り付けて保存
-4. ChatGPT / Google AI Studio（Chat） / Grok の会話ページを開いて、そのブックマークを実行
+## まず使うファイル
 
-## 1.1) 既存ブックマークを更新する
-1. `ai-chat-export.oneliner.js` の中身を **全部コピー**
-2. ブラウザの既存ブックマークを編集
-3. URL欄を丸ごと置き換えて保存
-4. 以前の URL が壊れていた場合は、名前はそのままで URL だけ差し替えればOK
+- `ai-chat-export.public.oneliner.js`
+  - 第一推奨。自己完結型のブックマークレット
+- `ai-chat-export.public.min.js`
+  - DevTools Console / Snippets 用
 
-## 1.2) 1行版を再生成する
+`public` 版は外部 `fetch` や外部 `script src` を使わないため、ChatGPT のように CSP が厳しいサイトでも動きやすいです。
+
+## 最短手順
+
+1. `ai-chat-export.public.oneliner.js` を開く
+2. 中身を全部コピーして、ブラウザのブックマーク URL 欄へ貼る
+3. ChatGPT / Grok / Google AI Studio の会話ページで実行する
+
+## 対応サイト
+
+- `chatgpt.com` / `*.chatgpt.com` / `chat.openai.com`
+- `grok` を含むドメイン
+- `x.com/i/grok` / `twitter.com/i/grok`
+- `aistudio.google.com` / `*.aistudio.google.com`
+- `claude` / `gemini` / `deepseek` を含む一部ドメイン
+
+## ファイルの使い分け
+
+- `ai-chat-export.public.oneliner.js`
+  - 配布向け。自己完結型のブックマークレット
+- `ai-chat-export.public.min.js`
+  - Console / Snippets 用
+- `ai-chat-export.oneliner.js`
+  - 通常版ワンライナー
+- `ai-chat-export.github-pages.oneliner.js`
+  - GitHub Pages ローダー版
+- `ai-chat-export.js`
+  - 可読ソース
+
+## 詳細ドキュメント
+
+- `docs/public-bookmarklet.ja.md`
+- `docs/bookmarklet-loader.ja.md`
+- `docs/github-pages-setup.ja.md`
+
+## 画面キャプチャ
+
+README には詳細画像を置かず、`assets/` にまとめます。
+
+- 画像の置き場所: `assets/screenshots/`
+- 撮るべき画像の一覧: `assets/README.ja.md`
+
+おすすめの画像は次です。
+
+1. [ブックマーク編集画面](assets/screenshots/01-bookmark-edit.png)
+2. [実行前の設定ダイアログ](assets/screenshots/02-config-dialog.png)
+3. [`ていねい` 実行中の進捗ダイアログ](assets/screenshots/03-careful-progress.png)
+4. [品質確認ダイアログ](assets/screenshots/04-quality-dialog.png)
+5. [保存された Markdown の例](assets/screenshots/05-exported-markdown.png)
+
+## 開発メモ
+
+ワンライナー再生成:
+
 ```bash
-bash /home/tn/projects/tools/ai_logger/generate_oneline_bookmarklet.sh
+./generate_oneline_bookmarklet.sh
 ```
 
-- 生成元: `ai-chat-export.js`
-- 確認用 minified: `ai-chat-export.min.js`
-- 出力先: `ai-chat-export.oneliner.js`
+`docs/` 同期:
 
-## 2) プリセット
-- はやい: 短い会話向き。自動展開OFF
-- ふつう: 普段はこれ。自動展開ON
-- ていねい: 長い会話・漏れ対策。スクロール多め＋待ち長め＋自動展開ON
+```bash
+./sync_docs_assets.sh
+./sync_site_docs.sh
+```
 
-## 3) 重要な挙動
-- 実行中にスクロールします（上→下）
-- 「続きを読む/もっと見る」等を（安全側に制限しつつ）クリックして展開します（ONの場合）
-- 最後に **保存前確認**（件数・前回比・末尾プレビュー）を出します
-- 保存前確認で **保存ファイル名を編集** できます
-- 保存前確認に **出力サイズ** を表示します
-- コピーが失敗したら自動的にファイル保存へ切り替えます
-- 必要なら「手動コピー欄（textarea）」で回収できます
+## ライセンス
 
-## 4) うまくいかないとき
-- 「ていねい」で再実行
-- 取得件数が前回と大きくズレる場合は、ページの最上部/最下部まで読み込みが終わっていない可能性があります
-- サイト側UI変更で壊れた場合は、Adapter（ChatGPT/Grok）側のselector修正が必要です
-
-## ファイル
-- 可読版: ai-chat-export.js
-- minified JS: ai-chat-export.min.js
-- ブックマーク登録用（1行）: ai-chat-export.oneliner.js
-- 再生成スクリプト: generate_oneline_bookmarklet.sh
-
-## 補足
-- `ai-chat-export.oneliner.js` は `javascript:` URL 文字列です。通常の JS lint 対象には向きません。
-- lint / 構文確認は `ai-chat-export.js` または `ai-chat-export.min.js` に対して行ってください。
-- `.eslintignore` と `.vscode/settings.json` で、生成物と履歴ディレクトリは lint / 検索 / watcher の対象外にしています。
+MIT

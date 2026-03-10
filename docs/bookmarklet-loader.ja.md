@@ -10,17 +10,21 @@
 
 ## 使うファイル
 
-- `../ai-chat-export.github-pages.oneliner.js`
+- `./ai-chat-export.github-pages.oneliner.js`
   - `script src` 方式
-- `../ai-chat-export.github-pages.fetch-loader.oneliner.js`
+- `./ai-chat-export.github-pages.fetch-loader.oneliner.js`
   - `fetch + eval` 方式の代替
-
-これらのファイルの中身は短い1行です。
 
 役割:
 
 1. GitHub Pages 上の `ai-chat-export.min.js` を読む
 2. そのJSを対象ページで実行する
+
+## 使う順番
+
+1. `public.oneliner`
+2. `public.min.js`
+3. このローダー方式
 
 ## どちらを使うべきか
 
@@ -28,7 +32,7 @@
 
 使うファイル:
 
-- `../ai-chat-export.github-pages.oneliner.js`
+- `./ai-chat-export.github-pages.oneliner.js`
 
 特徴:
 
@@ -39,39 +43,12 @@
 
 使うファイル:
 
-- `../ai-chat-export.github-pages.fetch-loader.oneliner.js`
+- `./ai-chat-export.github-pages.fetch-loader.oneliner.js`
 
 特徴:
 
 - `script src` が止まるサイトで動くことがある
 - `connect-src` や `unsafe-eval` 制約で止まることがある
-
-この方式は補助です。使う順番は次です。
-
-1. `public.oneliner`
-2. `public.min.js`
-3. このローダー方式
-
-## 登録方法
-
-1. `ai-chat-export.github-pages.oneliner.js` を開く
-2. 中身を全部コピーする
-3. ブラウザで新しいブックマークを作る
-4. 名前は分かりやすく `AI Chat Export Loader` などにする
-5. URL 欄へコピーした1行をそのまま貼る
-6. 保存する
-
-## 確認ポイント
-
-- 先頭が `javascript:(()=>` で始まっている
-- 途中に改行が入っていない
-- 末尾が `appendChild(s)})()` で終わっている
-
-## 実行方法
-
-1. ChatGPT / Grok / AI Studio の会話ページを開く
-2. ブックマークをクリックする
-3. 設定ダイアログが出れば成功
 
 ## 動かない時の切り分け
 
@@ -90,11 +67,6 @@
 - 404 で本体JSが取れていない
 - CSP で外部 script の読み込みが止められている
 - `fetch + eval` 方式では `connect-src` または `unsafe-eval` で止められている
-
-### 3. ブックマークのURL欄でまた切れる
-
-このローダーは短いので、本体直貼りよりかなり安全です。
-それでも切れる場合は、URL欄へ貼った後に保存前でもう一度開いて全文が残っているか見てください。
 
 ## 代替手段
 

@@ -1,23 +1,20 @@
 # AI Chat Export Assets
 
-GitHub Pages 公開用ディレクトリ `docs/` の編集元です。
+## Recommended Files
 
-## Files
-
-- `../ai-chat-export.public.oneliner.js`
+- `./ai-chat-export.public.oneliner.js`
   - 第一推奨。自己完結型ブックマークレット
-- `../ai-chat-export.public.min.js`
+- `./ai-chat-export.public.min.js`
   - 第一推奨。Console / Snippets 用
-- `ai-chat-export.min.js`
+- `./ai-chat-export.min.js`
   - GitHub Pages 配信用の本体JS
-- `../ai-chat-export.github-pages.oneliner.js`
+
+## Optional Loaders
+
+- `./ai-chat-export.github-pages.oneliner.js`
   - 補助。`script src` 型ローダー
-- `../ai-chat-export.github-pages.fetch-loader.oneliner.js`
+- `./ai-chat-export.github-pages.fetch-loader.oneliner.js`
   - 補助。`fetch + eval` 型ローダー
-- `../sync_docs_assets.sh`
-  - `docs/ai-chat-export.min.js` を同期する補助スクリプト
-- `../sync_site_docs.sh`
-  - `site-src/*.md` を `docs/` に同期する補助スクリプト
 
 ## Docs
 
