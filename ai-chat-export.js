@@ -968,7 +968,7 @@ class ScrollEngine{
         stats.topSettleIterations++;
         emit({
           stage:'top_settle',
-          message:'先頭付近の追加読み込みが落ち着くまで待っています…',
+          message:'先頭追い込み中…',
           iter:i+1,
           max:topSettleMaxRounds,
           count: messageMap.size
@@ -1399,7 +1399,7 @@ class App{
       presetWrap.append(
         presetCard('fast','はやい','短い会話向き。最速・展開なし'),
         presetCard('normal','ふつう','既定。普段使い向け'),
-        presetCard('careful','ていねい','長い会話向き。先頭で追加読み込みを粘る')
+        presetCard('careful','ていねい','長い会話向き。先頭追い込みあり')
       );
       body.appendChild(presetWrap);
 
@@ -1763,13 +1763,13 @@ class App{
       '',
       `上端まで到達: ${yn(quality.topReached)}`,
       `上端で安定した回数: ${quality.topStableHits}回`,
-      `上端の実効安定回数: ${quality.topStableEffectiveHits || quality.topStableHits || 0}回`,
+      `上端の実効安定: ${quality.topStableEffectiveHits || quality.topStableHits || 0}回`,
       `上方向で変化が止まった回数: ${quality.topNoChangeHits || 0}回`,
       `上方向の早期終了: ${yn(!!quality.topEarlyExit)}`,
-      `上端の追い込み確認回数: ${quality.topSettleIterations || 0}回`,
-      `上端の追い込みで安定した回数: ${quality.topSettleStableHits || 0}回`,
-      `上端の追い込みで増えた新規メッセージ: ${quality.topSettleNewMessages || 0}件`,
-      `上端の追い込みで統合した更新: ${quality.topSettleMergedUpdates || 0}件`,
+      `追い込み回数: ${quality.topSettleIterations || 0}回`,
+      `追い込み安定: ${quality.topSettleStableHits || 0}回`,
+      `追い込み追加会話: ${quality.topSettleNewMessages || 0}件`,
+      `追い込み統合数: ${quality.topSettleMergedUpdates || 0}件`,
       '',
       `下端まで到達: ${yn(quality.bottomReached)}`,
       `下端で安定した回数: ${quality.bottomStableHits}回`,
@@ -1796,28 +1796,28 @@ class App{
     lines.push(`見立て: ${overall}`);
 
     if (quality.topReached){
-      lines.push('上のほうの読み込み: 先頭まで確認できています。');
+      lines.push('上側: 先頭まで確認済み。');
     } else if (quality.topEarlyExit){
-      lines.push('上のほうの読み込み: 途中で変化が止まったため、そこで終了しました。');
+      lines.push('上側: 途中で変化が止まり終了。');
     } else {
-      lines.push('上のほうの読み込み: 先頭まで届いたかは断定できません。');
+      lines.push('上側: 先頭到達は未確定。');
     }
     if ((quality.topSettleIterations || 0) > 0){
-      lines.push(`先頭で追加読み込みを待った回数: ${quality.topSettleIterations}回`);
+      lines.push(`先頭追い込み回数: ${quality.topSettleIterations}回`);
     }
     if ((quality.topSettleNewMessages || 0) > 0){
-      lines.push(`先頭で待ったあとに増えた会話: ${quality.topSettleNewMessages}件`);
+      lines.push(`追い込み追加会話: ${quality.topSettleNewMessages}件`);
     }
 
     if (quality.bottomReached){
-      lines.push('下のほうの読み込み: 末尾まで確認できています。');
+      lines.push('下側: 末尾まで確認済み。');
     } else if (quality.bottomEarlyExit){
-      lines.push('下のほうの読み込み: 途中で変化が止まったため、そこで終了しました。');
+      lines.push('下側: 途中で変化が止まり終了。');
     } else {
-      lines.push('下のほうの読み込み: 末尾まで届いたかは断定できません。');
+      lines.push('下側: 末尾到達は未確定。');
     }
 
-    lines.push(`最終確認で増えた会話: ${quality.finalNewMessages}件`);
+    lines.push(`最終追加会話: ${quality.finalNewMessages}件`);
 
     if ((quality.expandClicks || 0) > 0){
       lines.push(`自動で本文を広げた回数: ${quality.expandClicks}回`);

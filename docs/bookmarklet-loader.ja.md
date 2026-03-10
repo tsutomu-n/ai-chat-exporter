@@ -1,8 +1,12 @@
 # ローダーブックマークレットの使い方
 
+この文書は補助用です。最初に使うべきなのは `public` 自己完結版です。
+
+- 先に読む: [public-bookmarklet.ja.md](./public-bookmarklet.ja.md)
+
 ## 目的
 
-長い本体コードをブックマークへ直接貼るのではなく、短いローダーだけをブックマークに入れます。
+長い本体コードをブックマークへ直接貼る代わりに、短いローダーだけをブックマークに入れる方式です。
 
 ## 使うファイル
 
@@ -42,8 +46,11 @@
 - `script src` が止まるサイトで動くことがある
 - `connect-src` や `unsafe-eval` 制約で止まることがある
 
-最初は `script src` 方式を試してください。
-だめなら `fetch + eval` 方式を試してください。
+この方式は補助です。使う順番は次です。
+
+1. `public.oneliner`
+2. `public.min.js`
+3. このローダー方式
 
 ## 登録方法
 
@@ -91,12 +98,12 @@
 
 ## 代替手段
 
-もし両方のローダー方式が止まる場合は、次の方法で使えます。
+もし両方のローダー方式が止まる場合は、次を使います。
 
-1. DevTools Console に `ai-chat-export.min.js` を貼って実行
-2. DevTools Snippets に登録して実行
+1. `ai-chat-export.public.min.js` を Console に貼って実行
+2. `ai-chat-export.public.min.js` を Snippets に登録して実行
 
 ## メモ
 
-ローダー方式は、ブックマークレットの「長すぎて保存できない」問題を避けるための方式です。
-本体の機能変更は `ai-chat-export.min.js` 側で管理します。
+ローダー方式は、補助的な配布方式です。
+ChatGPT では CSP の都合で失敗することがあります。
