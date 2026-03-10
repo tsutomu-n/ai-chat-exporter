@@ -84,10 +84,10 @@
 
 本体を更新したい時は次の順です。
 
-1. `ai-chat-export.js` を修正
-2. `ai-chat-export.min.js` を再生成
-3. `bash sync_docs_assets.sh` を実行
-4. `bash sync_site_docs.sh` を実行
+1. `src/ai-chat-export.js` を修正
+2. `bash scripts/generate_oneline_bookmarklet.sh` を実行
+3. `bash scripts/sync_docs_assets.sh` を実行
+4. `bash scripts/sync_site_docs.sh` を実行
 5. GitHub に push
 6. Pages の反映を待つ
 

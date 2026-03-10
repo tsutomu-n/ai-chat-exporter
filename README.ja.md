@@ -2,14 +2,12 @@
 
 ChatGPT / Grok / Google AI Studio などの会話を、Markdown / JSON として保存するブックマークレットです。
 
-## まず使うファイル
+## 最初に使うファイル
 
 - `ai-chat-export.public.oneliner.js`
   - 第一推奨。自己完結型のブックマークレット
-- `ai-chat-export.public.min.js`
-  - DevTools Console / Snippets 用
 
-`public` 版は外部 `fetch` や外部 `script src` を使わないため、ChatGPT のように CSP が厳しいサイトでも動きやすいです。
+初心者向けに `root` に残してあるのはこの1本だけです。外部 `fetch` や外部 `script src` を使わないため、ChatGPT のように CSP が厳しいサイトでも動きやすいです。
 
 ## 最短手順
 
@@ -25,17 +23,19 @@ ChatGPT / Grok / Google AI Studio などの会話を、Markdown / JSON として
 - `aistudio.google.com` / `*.aistudio.google.com`
 - `claude` / `gemini` / `deepseek` を含む一部ドメイン
 
-## ファイルの使い分け
+## 開発者向けの配置
 
-- `ai-chat-export.public.oneliner.js`
-  - 配布向け。自己完結型のブックマークレット
-- `ai-chat-export.public.min.js`
+- `dist/ai-chat-export.public.min.js`
   - Console / Snippets 用
-- `ai-chat-export.oneliner.js`
+- `dist/ai-chat-export.min.js`
+  - GitHub Pages 配信用の本体JS
+- `dist/ai-chat-export.oneliner.js`
   - 通常版ワンライナー
-- `ai-chat-export.github-pages.oneliner.js`
-  - GitHub Pages ローダー版
-- `ai-chat-export.js`
+- `loaders/ai-chat-export.github-pages.oneliner.js`
+  - GitHub Pages の `script src` ローダー版
+- `loaders/ai-chat-export.github-pages.fetch-loader.oneliner.js`
+  - GitHub Pages の `fetch + eval` ローダー版
+- `src/ai-chat-export.js`
   - 可読ソース
 
 ## 詳細ドキュメント
@@ -64,14 +64,14 @@ README には詳細画像を置かず、`assets/` にまとめます。
 ワンライナー再生成:
 
 ```bash
-./generate_oneline_bookmarklet.sh
+bash scripts/generate_oneline_bookmarklet.sh
 ```
 
 `docs/` 同期:
 
 ```bash
-./sync_docs_assets.sh
-./sync_site_docs.sh
+bash scripts/sync_docs_assets.sh
+bash scripts/sync_site_docs.sh
 ```
 
 ## ライセンス

@@ -2,20 +2,33 @@
 
 Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and Google AI Studio.
 
-## Recommended Files
+## Start Here
 
 - `ai-chat-export.public.oneliner.js`
   - Recommended self-contained bookmarklet
-- `ai-chat-export.public.min.js`
-  - DevTools Console / Snippets version
 
-The `public` variants do not rely on external `fetch` or external `script src`, so they are more reliable on CSP-restricted sites like ChatGPT.
+This is the only bookmarklet kept at the repository root for beginners. It does not rely on external `fetch` or external `script src`, so it is more reliable on CSP-restricted sites like ChatGPT.
 
 ## Quick Start
 
 1. Open `ai-chat-export.public.oneliner.js`
 2. Copy the entire line into a browser bookmark URL field
 3. Run it on a chat page
+
+## Developer Files
+
+- `dist/ai-chat-export.public.min.js`
+  - DevTools Console / Snippets version
+- `dist/ai-chat-export.min.js`
+  - Minified main script for GitHub Pages hosting
+- `dist/ai-chat-export.oneliner.js`
+  - Non-public one-line bookmarklet build
+- `loaders/ai-chat-export.github-pages.oneliner.js`
+  - `script src` loader bookmarklet
+- `loaders/ai-chat-export.github-pages.fetch-loader.oneliner.js`
+  - `fetch + eval` loader bookmarklet
+- `src/ai-chat-export.js`
+  - Readable source
 
 ## Supported Sites
 
@@ -47,14 +60,14 @@ Store UI screenshots in `assets/screenshots/`.
 Regenerate outputs:
 
 ```bash
-./generate_oneline_bookmarklet.sh
+bash scripts/generate_oneline_bookmarklet.sh
 ```
 
 Sync docs assets:
 
 ```bash
-./sync_docs_assets.sh
-./sync_site_docs.sh
+bash scripts/sync_docs_assets.sh
+bash scripts/sync_site_docs.sh
 ```
 
 ## License
