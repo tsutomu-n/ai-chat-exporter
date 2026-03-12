@@ -2,7 +2,7 @@ javascript:(async()=>{'use strict';
 /**
  * AIチャット書き出し（日本語UI）
  * - 対象: ChatGPT (chatgpt.com / chat.openai.com) / Google AI Studio (aistudio.google.com) / Grok (grok系 / x.com/i/grok) / フォールバック
- * - 形式: 標準Markdown（デフォルト）/ Obsidian向け / JSON（任意）
+ * - 形式: 標準Markdown（デフォルト）/ Obsidian向け / JSON / プレーンテキスト
  * - 重要: サイトの表示や規約変更で壊れる可能性があります。壊れたら直す前提の個人ツールです。
  */
 
@@ -24,6 +24,38 @@ const THEME = {
   font:'"Segoe UI Variable Text","Segoe UI","Yu Gothic UI",Meiryo,"Noto Sans JP",sans-serif',
   mono:'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
 };
+
+const FORMAT_ORDER = ['std', 'obs', 'json', 'txt'];
+const FORMAT_DEFS = Object.freeze({
+  std: Object.freeze({
+    label:'標準Markdown',
+    hint:'読みやすい普通の.md',
+    ext:'md',
+    mime:'text/markdown;charset=utf-8'
+  }),
+  obs: Object.freeze({
+    label:'Obsidian向け',
+    hint:'callout形式',
+    ext:'md',
+    mime:'text/markdown;charset=utf-8'
+  }),
+  json: Object.freeze({
+    label:'JSON',
+    hint:'機械処理向け',
+    ext:'json',
+    mime:'application/json;charset=utf-8'
+  }),
+  txt: Object.freeze({
+    label:'プレーンテキスト',
+    hint:'装飾なしのテキスト',
+    ext:'txt',
+    mime:'text/plain;charset=utf-8'
+  })
+});
+
+function normalizeFormatId(fmt){
+  return Object.prototype.hasOwnProperty.call(FORMAT_DEFS, fmt) ? fmt : 'std';
+}
 
 class Utils{
   static el(tag, props={}, children=null){
@@ -317,6 +349,97 @@ class MarkdownParser{
     md = md.replace(/\n{4,}/g,'\n\n\n');
     md = md.replace(/\n{3,}$/g,'\n\n');
     return md.trim();
+  }
+}
+
+class PlainTextFormatter{
+  static fromMarkdown(md){
+    const src = String(md || '').replace(/\r/g,'');
+    if (!src) return '';
+    const out = [];
+    const lines = src.split('\n');
+    let fence = null;
+
+    for (const rawLine of lines){
+      if (!fence){
+        const open = rawLine.match(/^([`~]{3,})(.*)$/);
+        if (open){
+          fence = open[1];
+          continue;
+        }
+      } else if (rawLine.trim() === fence){
+        fence = null;
+        continue;
+      }
+
+      if (fence){
+        out.push(rawLine.replace(/[ \t]+$/g,''));
+        continue;
+      }
+
+      if (/^\s*[-*_]{3,}\s*$/.test(rawLine)){
+        out.push('');
+        continue;
+      }
+
+      if (/^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(rawLine)){
+        continue;
+      }
+
+      if (/^\s*\|.*\|\s*$/.test(rawLine)){
+        const row = rawLine
+          .trim()
+          .replace(/^\|/,'')
+          .replace(/\|$/,'')
+          .split('|')
+          .map(cell=>this.normalizeInline(cell.replace(/\\\|/g,'|').trim()))
+          .join('\t');
+        out.push(row);
+        continue;
+      }
+
+      let line = rawLine.replace(/^\s{0,3}#{1,6}\s+/, '');
+      line = line.replace(/^\s*>\s?/,'');
+      out.push(this.normalizeInline(line));
+    }
+
+    return this.clean(out.join('\n'));
+  }
+
+  static normalizeInline(text){
+    let line = String(text || '');
+    for (let i=0;i<6;i++){
+      const next = line
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url)=>{
+          const a = String(alt || '').trim();
+          const u = String(url || '').trim();
+          if (a && u) return `${a} (${u})`;
+          return a || u || '画像';
+        })
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url)=>{
+          const l = String(label || '').trim();
+          const u = String(url || '').trim();
+          return u ? `${l} (${u})` : l;
+        })
+        .replace(/`([^`]+)`/g,'$1')
+        .replace(/\*\*([^*]+)\*\*/g,'$1')
+        .replace(/\*([^*]+)\*/g,'$1');
+      if (next === line) break;
+      line = next;
+    }
+    return line
+      .replace(/\\([\\`*_{}\[\]()#+\-.!|>~])/g,'$1')
+      .replace(/[ \t]+/g,' ')
+      .replace(/[ \t]+$/g,'');
+  }
+
+  static clean(text){
+    return String(text || '')
+      .replace(/\n{3,}/g,'\n\n')
+      .split('\n')
+      .map(line=>line.replace(/[ \t]+$/g,''))
+      .join('\n')
+      .trim();
   }
 }
 
@@ -1118,7 +1241,8 @@ class App{
     const merged = {
       ...def,
       preset,
-      fmt: (raw && typeof raw.fmt === 'string') ? raw.fmt : def.fmt,
+      fmt: normalizeFormatId(raw && typeof raw.fmt === 'string' ? raw.fmt : def.fmt),
+      txtHeader: typeof raw?.txtHeader === 'boolean' ? raw.txtHeader : def.txtHeader,
       scrollMax: Number.isFinite(raw?.scrollMax) ? raw.scrollMax : undefined,
       scrollDelay: Number.isFinite(raw?.scrollDelay) ? raw.scrollDelay : undefined,
       autoExpand: typeof raw?.autoExpand === 'boolean' ? raw.autoExpand : undefined,
@@ -1137,7 +1261,8 @@ class App{
 
   getPersistedConfig(){
     return {
-      fmt: this.config.fmt,
+      fmt: this.getFormatId(),
+      txtHeader: !!this.config.txtHeader,
       preset: this.config.preset,
       scrollMax: this.config.scrollMax,
       scrollDelay: this.config.scrollDelay,
@@ -1155,7 +1280,8 @@ class App{
       careful: { scrollMax: 96, scrollDelay: 420, autoExpand:true,  expandMaxClicks: 80, expandClickDelay: 150 }
     };
     return {
-      fmt:'std', // std|obs|json
+      fmt:'std', // std|obs|json|txt
+      txtHeader:true,
       preset:'normal',
       presets,
       // 手動調整（詳細設定）
@@ -1420,20 +1546,36 @@ class App{
       // 形式
       body.appendChild(this.sectionTitle('保存形式'));
       const fmtWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
-      const fmtBtn = (id, label, hint)=>{
-        const active = this.config.fmt===id;
+      const fmtBtn = (id, def)=>{
+        const active = this.getFormatId()===id;
         const b = Utils.el('button',{style:`padding:11px 12px;border-radius:12px;border:1px solid ${active?THEME.accentLine:THEME.border};background:${active?'rgba(95,162,255,0.14)':THEME.bg};color:${THEME.fg};cursor:pointer;`});
-        b.append(Utils.el('div',{text:label,style:'font-weight:700;font-size:14px;line-height:1.45;'}),
-                 Utils.el('div',{text:hint,style:`margin-top:4px;font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:500;`}));
+        b.append(Utils.el('div',{text:def.label,style:'font-weight:700;font-size:14px;line-height:1.45;'}),
+                 Utils.el('div',{text:def.hint,style:`margin-top:4px;font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:500;`}));
         b.addEventListener('click', ()=>{ this.config.fmt=id; this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); });
         return b;
       };
-      fmtWrap.append(
-        fmtBtn('std','標準Markdown','読みやすい普通の.md'),
-        fmtBtn('obs','Obsidian向け','callout形式'),
-        fmtBtn('json','JSON','機械処理向け')
-      );
+      for (const id of FORMAT_ORDER){
+        fmtWrap.append(fmtBtn(id, FORMAT_DEFS[id]));
+      }
       body.appendChild(fmtWrap);
+
+      if (this.getFormatId()==='txt'){
+        const txtRow = Utils.el('div',{style:`margin-top:14px;padding:12px;border-radius:14px;border:1px solid ${THEME.border};background:${THEME.bg};display:flex;gap:10px;align-items:flex-start;`});
+        const txtHeaderCb = Utils.el('input',{type:'checkbox',style:'margin-top:3px;'});
+        txtHeaderCb.checked = !!this.config.txtHeader;
+        txtHeaderCb.addEventListener('change', ()=>{
+          this.config.txtHeader = txtHeaderCb.checked;
+          this.saveConfig();
+        });
+        txtRow.append(
+          txtHeaderCb,
+          Utils.el('div',{},[
+            Utils.el('div',{text:'会話ヘッダーを付ける',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
+            Utils.el('div',{text:'タイトル、保存日時、URL、品質判定を先頭に入れます。本文だけ欲しい場合は外してください。',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+          ])
+        );
+        body.appendChild(txtRow);
+      }
 
       // 詳細
       const details = Utils.el('details',{style:`margin-top:14px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
@@ -1578,8 +1720,17 @@ class App{
   getPresetLabel(){
     return this.config.preset==='fast'?'はやい' : this.config.preset==='careful'?'ていねい' : 'ふつう';
   }
+  getFormatId(){
+    return normalizeFormatId(this.config.fmt);
+  }
+  getFormatDef(){
+    return FORMAT_DEFS[this.getFormatId()];
+  }
   getFormatLabel(){
-    return this.config.fmt==='obs'?'Obsidian向け' : this.config.fmt==='json'?'JSON' : '標準Markdown';
+    return this.getFormatDef().label;
+  }
+  isTxtHeaderEnabled(){
+    return this.getFormatId()==='txt' && !!this.config.txtHeader;
   }
 
   roleLabel(role){
@@ -1604,7 +1755,7 @@ class App{
       saved_at: Utils.formatDateJST(new Date()),
       message_count: messages.length,
       preset: this.config.preset,
-      format: this.config.fmt,
+      format: this.getFormatId(),
       quality_status: quality?.status || 'WARN',
       quality_score: quality?.score ?? 0,
       warning: warning.hasWarning,
@@ -1738,12 +1889,11 @@ class App{
     const d = new Date();
     const pad=n=>String(n).padStart(2,'0');
     const stamp = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
-    const ext = this.config.fmt==='json' ? 'json' : 'md';
-    return `${stamp}_${base}.${ext}`;
+    return `${stamp}_${base}.${this.getFormatDef().ext}`;
   }
 
   normalizeDownloadFileName(raw, fallback){
-    const ext = this.config.fmt==='json' ? '.json' : '.md';
+    const ext = `.${this.getFormatDef().ext}`;
     const base = String(raw || '').trim().replace(/[\\/:*?"<>|]+/g,'_');
     const safe = base || fallback;
     return /\.[a-z0-9]+$/i.test(safe) ? safe : `${safe}${ext}`;
@@ -1834,15 +1984,36 @@ class App{
     return lines;
   }
 
+  buildOutputPreviewText(output, maxChars=1200){
+    const normalized = String(output || '').trim();
+    if (!normalized){
+      return {title:'保存内容プレビュー', text:'(空)'};
+    }
+    if (normalized.length <= maxChars){
+      return {title:'保存内容プレビュー', text:normalized};
+    }
+    return {
+      title:`保存内容プレビュー（先頭${maxChars.toLocaleString('ja-JP')}文字）`,
+      text:`${normalized.slice(0, maxChars).trimEnd()}\n\n…（以下省略）`
+    };
+  }
+
+  buildOutputPreview(messages, quality, diff){
+    const {output} = this.formatOutput(messages, quality, diff);
+    return this.buildOutputPreviewText(output);
+  }
+
   formatOutput(messages, quality, diff){
     const title = this.adapter.getTitle();
     const savedAt = Utils.formatDateJST(new Date());
     const site = this.adapter.label;
     const url = location.href;
+    const formatId = this.getFormatId();
+    const formatDef = this.getFormatDef();
     const metadata = this.buildExportMetadata(title, messages, quality, diff);
     const yaml = this.dumpYaml(metadata);
 
-    if (this.config.fmt==='json'){
+    if (formatId==='json'){
       const payload = {
         metadata: {
           ...metadata,
@@ -1856,7 +2027,21 @@ class App{
     }
 
     let out = '';
-    if (this.config.fmt==='obs'){
+
+    if (formatId==='txt'){
+      if (this.isTxtHeaderEnabled()){
+        out += `${title}\n\n- 形式: ${formatDef.label}\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${messages.length}\n- 品質判定: ${metadata.quality_status} (${metadata.quality_score}点)\n- 警告: ${metadata.warning_text}\n\n================\n\n`;
+      }
+      for (let i=0;i<messages.length;i++){
+        const m = messages[i];
+        const body = PlainTextFormatter.fromMarkdown(m.content || '');
+        out += `${this.roleLabel(m.role)}:\n${body || '(空)'}\n\n`;
+        if (i < messages.length-1) out += `----------------\n\n`;
+      }
+      return {fileName:this.makeFileName(title), output: out.trim()+'\n'};
+    }
+
+    if (formatId==='obs'){
       out += yaml;
       out += `# ${title}\n\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n\n---\n\n`;
       for (const m of messages){
@@ -1881,7 +2066,7 @@ class App{
 
   downloadFile(fileName, content){
     try{
-      const type = this.config.fmt==='json' ? 'application/json;charset=utf-8' : 'text/markdown;charset=utf-8';
+      const type = this.getFormatDef().mime;
       const blob = new Blob([content], {type});
       const url = URL.createObjectURL(blob);
       const a = Utils.el('a',{href:url,download:fileName});
@@ -1952,18 +2137,13 @@ class App{
       );
       body.appendChild(grid);
 
-      // プレビュー（末尾）
+      const previewData = this.buildOutputPreviewText(output);
+
+      // プレビュー（保存内容）
       const preview = Utils.el('details',{style:`margin-top:14px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-      preview.appendChild(Utils.el('summary',{text:'プレビュー（末尾5件）',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
-      const pvInner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
-      const last = messages.slice(-5);
-      for (const m of last){
-        const snippet = (m.content||'').replace(/\s+/g,' ').trim().slice(0,160);
-        pvInner.appendChild(Utils.el('div',{style:`padding:10px 12px;border-radius:12px;border:1px solid ${THEME.border};background:${THEME.surface};`},[
-          Utils.el('div',{text:this.roleLabel(m.role),style:`font-size:14px;line-height:1.55;color:${THEME.muted};font-weight:700;margin-bottom:4px;`}),
-          Utils.el('div',{text:snippet || '(空)',style:`font-size:14px;line-height:1.65;color:${THEME.fg};word-break:break-word;font-weight:500;`})
-        ]));
-      }
+      preview.appendChild(Utils.el('summary',{text:previewData.title,style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
+      const pvInner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';'});
+      pvInner.appendChild(Utils.el('pre',{text:previewData.text,style:`margin:0;white-space:pre-wrap;word-break:break-word;font:12px/1.65 ${THEME.mono};color:${THEME.fg};`}));
       preview.appendChild(pvInner);
       body.appendChild(preview);
 

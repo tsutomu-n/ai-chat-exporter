@@ -1,6 +1,6 @@
 # AI Chat Export
 
-Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and Google AI Studio.
+Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and Google AI Studio, with Markdown, JSON, and plain-text outputs.
 
 ## Start Here
 

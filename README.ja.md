@@ -1,6 +1,6 @@
 # AIチャット書き出し
 
-ChatGPT / Grok / Google AI Studio などの会話を、Markdown / JSON として保存するブックマークレットです。
+ChatGPT / Grok / Google AI Studio などの会話を、Markdown / JSON / プレーンテキストとして保存するブックマークレットです。
 
 ## 最初に使うファイル
 
