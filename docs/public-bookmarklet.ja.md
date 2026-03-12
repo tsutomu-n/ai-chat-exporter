@@ -6,7 +6,7 @@
 - `./ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
 - `./ai-chat-export.claude.bookmarklet.oneliner.js`
 
-通常はこの分割版が第一推奨です。ブックマーク編集欄に保存しやすい長さを優先しています。統合版を 1 本で使いたい場合は、UTF-8 ベースの `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試してください。過去の高機能版や派生版は repository 側の `archive/README.ja.md` にまとめています。
+通常はこの分割版が第一推奨です。ブックマーク編集欄に保存しやすい長さを優先しています。統合版を 1 本で使いたい場合は、結果確認 UI を軽くした `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試してください。過去の高機能版や派生版は repository 側の `archive/README.ja.md` にまとめています。
 
 ## 使い方
 

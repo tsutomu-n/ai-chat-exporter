@@ -15,7 +15,7 @@ Integrated builds are also available:
 
 - `ai-chat-export.bookmarklet.oneliner.js`
 - `ai-chat-export.unified.bookmarklet.oneliner.js`
-  - UTF-8 unified build
+  - compact integrated build with a simpler result dialog
   - more bookmark-editor-friendly on Firefox
 
 `ai-chat-export.bookmarklet.oneliner.js` can still be too long for some bookmark editors. If you want one integrated file, try `ai-chat-export.unified.bookmarklet.oneliner.js` first. In practice, the split variants are still the safest.
@@ -39,7 +39,7 @@ Integrated builds are also available:
 - `ai-chat-export.bookmarklet.oneliner.js`
   - ASCII unified bookmarklet
 - `ai-chat-export.unified.bookmarklet.oneliner.js`
-  - UTF-8 unified bookmarklet
+  - compact ASCII unified bookmarklet
   - Firefox-friendlier integrated build
 - `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
   - recommended for ChatGPT and Claude

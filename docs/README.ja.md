@@ -9,7 +9,7 @@
 - `./ai-chat-export.claude.bookmarklet.oneliner.js`
   - Claude 専用の最短版
 
-統合版の `./ai-chat-export.bookmarklet.oneliner.js` と `./ai-chat-export.unified.bookmarklet.oneliner.js` もあります。1 本で使いたい場合は、UTF-8 ベースの `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試すのが安全です。高機能版や比較用の派生版、Console 用ファイル、ローダー版は repository 側の `archive/README.ja.md` に退避しています。
+統合版の `./ai-chat-export.bookmarklet.oneliner.js` と `./ai-chat-export.unified.bookmarklet.oneliner.js` もあります。1 本で使いたい場合は、結果確認 UI を軽くした `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試すのが安全です。高機能版や比較用の派生版、Console 用ファイル、ローダー版は repository 側の `archive/README.ja.md` に退避しています。
 
 ## 推奨順
 

@@ -40,6 +40,7 @@ TMP_LITE_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.no-obs.body.XXXXXX.js")"
 TMP_LITE_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.no-obs.public.min.XXXXXX.js")"
 TMP_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.minimal.body.XXXXXX.js")"
 TMP_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.minimal.public.min.XXXXXX.js")"
+TMP_UNIFIED_FIREFOX_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.unified.firefox.body.XXXXXX.js")"
 TMP_UNIFIED_FIREFOX_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.unified.firefox.public.min.XXXXXX.js")"
 TMP_CHATGPT_CLAUDE_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.chatgpt-claude-minimal.body.XXXXXX.js")"
 TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.chatgpt-claude-minimal.public.min.XXXXXX.js")"
@@ -49,16 +50,16 @@ TMP_CLAUDE_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.claude-minimal
 TMP_CLAUDE_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.claude-minimal.public.min.XXXXXX.js")"
 
 cleanup() {
-  rm -f "${TMP_BODY}" "${TMP_MIN}" "${TMP_PUBLIC_MIN}" "${TMP_LITE_BODY}" "${TMP_LITE_PUBLIC_MIN}" "${TMP_MINIMAL_BODY}" "${TMP_MINIMAL_PUBLIC_MIN}" "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}" "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}" "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}" "${TMP_CLAUDE_MINIMAL_BODY}" "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"
+  rm -f "${TMP_BODY}" "${TMP_MIN}" "${TMP_PUBLIC_MIN}" "${TMP_LITE_BODY}" "${TMP_LITE_PUBLIC_MIN}" "${TMP_MINIMAL_BODY}" "${TMP_MINIMAL_PUBLIC_MIN}" "${TMP_UNIFIED_FIREFOX_BODY}" "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}" "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}" "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}" "${TMP_CLAUDE_MINIMAL_BODY}" "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"
 }
 trap cleanup EXIT
 
 mkdir -p "${ARCHIVE_DIST_DIR}" "${ARCHIVE_BOOKMARKLET_DIR}" "${ARCHIVE_VARIANTS_DIR}" "${ARCHIVE_LOADERS_DIR}"
 
-node - "${SRC}" "${TMP_BODY}" "${TMP_LITE_BODY}" "${TMP_MINIMAL_BODY}" "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" "${TMP_CLAUDE_MINIMAL_BODY}" <<'NODE'
+node - "${SRC}" "${TMP_BODY}" "${TMP_LITE_BODY}" "${TMP_MINIMAL_BODY}" "${TMP_UNIFIED_FIREFOX_BODY}" "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" "${TMP_CLAUDE_MINIMAL_BODY}" <<'NODE'
 const fs = require('fs');
 
-const [, , srcPath, bodyPath, liteBodyPath, minimalBodyPath, chatgptClaudeMinimalBodyPath, aiStudioGrokMinimalBodyPath, claudeMinimalBodyPath] = process.argv;
+const [, , srcPath, bodyPath, liteBodyPath, minimalBodyPath, unifiedFirefoxBodyPath, chatgptClaudeMinimalBodyPath, aiStudioGrokMinimalBodyPath, claudeMinimalBodyPath] = process.argv;
 const source = fs.readFileSync(srcPath, 'utf8').replace(/^javascript:/, '');
 
 function replaceExact(text, from, to, label) {
@@ -167,9 +168,178 @@ const claudeMinimal = replaceExact(
   'Claude-only adapter factory',
 );
 
+let unifiedFirefox = minimal;
+unifiedFirefox = replaceRegex(
+  unifiedFirefox,
+  /\n\s*buildResultSnapshotSummaryLines\(snapshot\)\{[\s\S]*?\n\s*async resolveResultDialogChoice\(/,
+  `
+  buildResultSnapshotSummaryLines(snapshot){
+    if (!snapshot) return [];
+    return [\`会話数: \${(snapshot.messages || []).length}件\`];
+  }
+
+  async resolveResultDialogChoice(`,
+  'result snapshot summary block',
+);
+unifiedFirefox = replaceRegex(
+  unifiedFirefox,
+  /\n\s*qualitySummary\(quality, diff\)\{[\s\S]*?\n\s*getPresetLabel\(\)\{/,
+  `
+  qualitySummary(quality,diff){
+    const q = quality || {status:'WARN', score:0};
+    const label = q.status==='PASS' ? '良好' : q.status==='WARN' ? '注意' : '再実行';
+    const color = q.status==='PASS' ? THEME.ok : q.status==='WARN' ? THEME.warn : THEME.bad;
+    const hint = q.status==='PASS' ? '保存してよさそうです。' : q.status==='WARN' ? '必要なら再実行してください。' : '再実行推奨です。';
+    let diffLine = '';
+    if (diff?.previous){
+      const sign = diff.diff>0 ? '+' : '';
+      diffLine = \`\${diff.previousLabel || '前回'}: \${diff.previous.count}件 / 今回: \${diff.now.count}件（差分 \${sign}\${diff.diff}件）\`;
+    }
+    return {label, color, hint, diffLine, score:q.score, raw:q};
+  }
+
+  getPresetLabel(){`,
+  'unified Firefox quality summary block',
+);
+unifiedFirefox = replaceRegex(
+  unifiedFirefox,
+  /\n\s*buildExportMetadata\(title, messages, quality, diff\)\{[\s\S]*?\n\s*formatOutput\(messages, quality, diff\)\{/,
+  `
+  buildExportMetadata(title, messages, quality, diff){
+    return {
+      title,
+      site: this.adapter.label,
+      conversation_url: location.href,
+      saved_at: Utils.formatDateJST(new Date()),
+      message_count: messages.length,
+      preset: this.config.preset,
+      format: this.getFormatId(),
+      quality_status: quality?.status || 'WARN',
+      quality_score: quality?.score ?? 0,
+      previous_count: diff?.previous?.count
+    };
+  }
+
+  dumpYaml(obj){
+    return ['---', ...Object.entries(obj).map(([k,v])=>\`\${k}: \${this.yamlValue(v)}\`), '---', ''].join('\\n');
+  }
+
+  warningSummary({quality, diff}){
+    const q = quality || {status:'WARN'};
+    const parts = [];
+    if (q.status!=='PASS') parts.push(q.status==='WARN' ? '注意' : '再実行');
+    if (diff?.previous){
+      const diffAbs = Math.abs(diff.diff || 0);
+      if (diffAbs > 1) parts.push(\`差分 \${diff.diff>0?'+':''}\${diff.diff}件\`);
+    }
+    const text = parts.length ? parts.join(' / ') : 'なし';
+    return {hasWarning: parts.length > 0, text};
+  }
+
+  compactSummaryLines(messages, quality, diff, savedState='未保存'){
+    const diffLine = diff?.previous ? \`前回比: \${diff.diff>0?'+':''}\${diff.diff}件\` : '前回比: なし';
+    return [\`抽出件数: \${messages.length}件\`, \`保存状態: \${savedState}\`, diffLine];
+  }
+
+  lastAttemptStatusLabel(){
+    const {previous} = this.loadRunMeta();
+    return \`最終保存: \${Number.isFinite(previous?.count) ? \`\${previous.count}件\` : 'なし'}\`;
+  }
+
+  comparisonBaseLabel(diff){
+    return Number.isFinite(diff?.previous?.count) ? \`比較ベース: \${diff.previous.count}件\` : '比較ベース: なし';
+  }
+
+  async confirmRerunDialog(mode='normal'){
+    const label = mode==='careful' ? 'ていねいで再実行' : '再実行';
+    return window.confirm(\`\${label}しますか？\\n現在の結果は保持したまま再取得します。\`);
+  }
+
+  makeFileName(title){
+    const base = Utils.filenameSafe(title);
+    const d = new Date();
+    const pad=n=>String(n).padStart(2,'0');
+    const stamp = \`\${d.getFullYear()}-\${pad(d.getMonth()+1)}-\${pad(d.getDate())}_\${pad(d.getHours())}\${pad(d.getMinutes())}\`;
+    return \`\${stamp}_\${base}.\${this.getFormatDef().ext}\`;
+  }
+
+  formatOutput(messages, quality, diff){`,
+  'unified Firefox compact export/output helpers',
+);
+unifiedFirefox = replaceRegex(
+  unifiedFirefox,
+  /\n\s*async showResultDialog\(messages, quality, options=\{\}\)\{[\s\S]*?\n\s*async runOnce\(\{skipConfig=false\}=\{\}\)\{/,
+  `
+  async showResultDialog(messages, quality, options={}){
+    return new Promise(resolve=>{
+      const alternateSnapshot = options?.alternateSnapshot || null;
+      const alternateButtonLabel = options?.alternateButtonLabel || '前回結果';
+      const resultPreset = options?.preset || this.config.preset;
+      const diff = this.diffInfo(messages, alternateSnapshot);
+      const summary = this.qualitySummary(quality, diff);
+      const {fileName, output} = this.formatOutput(messages, quality, diff);
+
+      const ov = this.overlay();
+      const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
+      const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
+      const lines = [
+        \`判定: \${summary.label}（\${summary.score}点）\`,
+        summary.hint,
+        summary.diffLine || this.comparisonBaseLabel(diff),
+        \`件数: \${messages.length}件 / 速度: \${this.getPresetLabelFor(resultPreset)} / 形式: \${this.getFormatLabel()}\`
+      ];
+      for (const line of lines){
+        body.appendChild(Utils.el('div',{text:line,style:\`font-size:14px;line-height:1.6;color:\${THEME.fg};font-weight:500;\`}));
+      }
+
+      const footer = Utils.el('div',{style:\`padding:14px 18px;background:\${THEME.surface};border-top:1px solid \${THEME.border};display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;\`});
+      const finish=(action)=>{
+        try{ ov.remove(); }catch{}
+        resolve(action);
+      };
+
+      footer.append(
+        this.btn('中止','subtle', ()=>finish({action:'cancel'})),
+        alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
+        this.btn('再実行','secondary', async ()=>{
+          if (await this.confirmRerunDialog('normal')) finish({action:'rerun'});
+        }),
+        this.btn('ていねい','secondary', async ()=>{
+          if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
+        }),
+        this.btn('コピー','secondary', async ()=>{
+          try{
+            await navigator.clipboard.writeText(output);
+            Utils.toast('コピーしました。','success');
+            finish({action:'done_clipboard', saveState:'clipboard'});
+          }catch{
+            try{
+              window.prompt('コピーできなかったため、この欄から手動でコピーしてください。', output);
+            }catch{
+              Utils.toast('コピーできませんでした。保存を使ってください。','warn', 3200);
+            }
+          }
+        }),
+        this.btn('保存','primary', ()=>{
+          const ok = this.downloadFile(fileName, output);
+          finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
+        })
+      );
+
+      modal.append(body, footer);
+      ov.appendChild(modal);
+      document.body.appendChild(ov);
+    });
+  }
+
+  async runOnce({skipConfig=false}={}){`,
+  'unified Firefox compact result dialog',
+);
+
 fs.writeFileSync(bodyPath, `${source}\n`);
 fs.writeFileSync(liteBodyPath, `${lite}\n`);
 fs.writeFileSync(minimalBodyPath, `${minimal}\n`);
+fs.writeFileSync(unifiedFirefoxBodyPath, `${unifiedFirefox}\n`);
 fs.writeFileSync(chatgptClaudeMinimalBodyPath, `${chatgptClaudeMinimal}\n`);
 fs.writeFileSync(aiStudioGrokMinimalBodyPath, `${aiStudioGrokMinimal}\n`);
 fs.writeFileSync(claudeMinimalBodyPath, `${claudeMinimal}\n`);
@@ -180,7 +350,7 @@ if command -v bunx >/dev/null 2>&1; then
   bunx terser "${TMP_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_PUBLIC_MIN}"
   bunx terser "${TMP_LITE_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_LITE_PUBLIC_MIN}"
   bunx terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_MINIMAL_PUBLIC_MIN}"
-  bunx terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --output "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}"
+  bunx terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}"
   bunx terser "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}"
   bunx terser "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}"
   bunx terser "${TMP_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"
@@ -189,7 +359,7 @@ else
   npx --yes terser "${TMP_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_PUBLIC_MIN}"
   npx --yes terser "${TMP_LITE_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_LITE_PUBLIC_MIN}"
   npx --yes terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_MINIMAL_PUBLIC_MIN}"
-  npx --yes terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --output "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}"
+  npx --yes terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}"
   npx --yes terser "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}"
   npx --yes terser "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}"
   npx --yes terser "${TMP_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"

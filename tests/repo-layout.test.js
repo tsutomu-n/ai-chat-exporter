@@ -243,7 +243,7 @@ describe("repository layout", () => {
     expect(claude.length).toBeLessThan(64000);
   });
 
-  test("ships a Firefox-friendly UTF-8 unified bookmarklet variant", () => {
+  test("ships a Firefox-safe ASCII unified bookmarklet variant", () => {
     const generic = readRepoFile("ai-chat-export.bookmarklet.oneliner.js");
     const unified = readRepoFile("ai-chat-export.unified.bookmarklet.oneliner.js");
 
@@ -252,7 +252,7 @@ describe("repository layout", () => {
     expect(unified).toContain("aistudio.google.com");
     expect(unified).toContain("x.com");
     expect(unified.length).toBeLessThan(generic.length);
-    expect(Buffer.byteLength(unified, "utf8")).toBeLessThan(64000);
-    expect(/[^\x00-\x7F]/.test(unified)).toBe(true);
+    expect(unified.length).toBeLessThan(62000);
+    expect(/[^\x00-\x7F]/.test(unified)).toBe(false);
   });
 });
