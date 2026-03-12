@@ -2,8 +2,10 @@
 
 ## Recommended Files
 
+- `./ai-chat-export.bookmarklet.oneliner.js`
+  - 第一推奨。短いブックマークレット
 - `./ai-chat-export.public.oneliner.js`
-  - 第一推奨。自己完結型ブックマークレット
+  - 高機能な自己完結型ブックマークレット
 - `./ai-chat-export.public.min.js`
   - 第一推奨。Console / Snippets 用
 - `./ai-chat-export.min.js`
@@ -25,9 +27,10 @@
 
 ## Recommended Order
 
-1. `public.oneliner`
-2. `public.min.js`
-3. GitHub Pages ローダー
+1. `bookmarklet.oneliner`
+2. `public.oneliner`
+3. `public.min.js`
+4. GitHub Pages ローダー
 
 ## GitHub Pages URL
 

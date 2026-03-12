@@ -2,19 +2,22 @@
 
 ## 最初に使うファイル
 
-- `./ai-chat-export.public.oneliner.js`
+- `./ai-chat-export.bookmarklet.oneliner.js`
 
 このファイルが、現在の第一推奨です。
 
 理由:
 
+- 短いのでブックマーク編集欄で保存されやすい
 - 自己完結型
 - 外部 `fetch` や外部 `script src` がない
 - ChatGPT の CSP に止められにくい
 
+高機能版を使いたい場合は `./ai-chat-export.public.oneliner.js` を使います。
+
 ## 使い方
 
-1. `ai-chat-export.public.oneliner.js` を開く
+1. `ai-chat-export.bookmarklet.oneliner.js` を開く
 2. 中身を全部コピーする
 3. ブラウザで新しいブックマークを作る
 4. 名前を `AI Chat Export` などにする
@@ -50,6 +53,7 @@
 
 ブックマークで難しい場合は次を使います。
 
+- `./ai-chat-export.public.oneliner.js`
 - `./ai-chat-export.public.min.js`
 
-DevTools の Console か Snippets で使えます。
+`./ai-chat-export.public.oneliner.js` は長い代わりに高機能版です。`./ai-chat-export.public.min.js` は DevTools の Console か Snippets で使えます。

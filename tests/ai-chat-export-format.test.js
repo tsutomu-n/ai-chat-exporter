@@ -68,6 +68,175 @@ function loadApp({ storedConfig } = {}) {
   };
 }
 
+function setupUiDom() {
+  class FakeNode {
+    constructor(nodeType, ownerDocument = null) {
+      this.nodeType = nodeType;
+      this.ownerDocument = ownerDocument;
+      this.parentNode = null;
+      this.childNodes = [];
+    }
+
+    appendChild(child) {
+      if (!child) return child;
+      child.parentNode = this;
+      if (this.nodeType === 1) child.parentElement = this;
+      child.ownerDocument = this.ownerDocument || this;
+      this.childNodes.push(child);
+      return child;
+    }
+
+    append(...children) {
+      for (const child of children) {
+        if (Array.isArray(child)) {
+          this.append(...child);
+        } else if (typeof child === "string") {
+          this.appendChild(this.ownerDocument.createTextNode(child));
+        } else if (child != null) {
+          this.appendChild(child);
+        }
+      }
+    }
+
+    remove() {
+      const parent = this.parentNode;
+      if (!parent) return;
+      const idx = parent.childNodes.indexOf(this);
+      if (idx >= 0) parent.childNodes.splice(idx, 1);
+      this.parentNode = null;
+      this.parentElement = null;
+    }
+
+    get textContent() {
+      if (this.nodeType === 3) return this._text || "";
+      return this.childNodes.map((child) => child.textContent).join("");
+    }
+
+    set textContent(value) {
+      if (this.nodeType === 3) {
+        this._text = String(value ?? "");
+        return;
+      }
+      this.childNodes = [];
+      if (value != null && value !== "") {
+        this.appendChild(this.ownerDocument.createTextNode(String(value)));
+      }
+    }
+  }
+
+  class FakeTextNode extends FakeNode {
+    constructor(text, ownerDocument) {
+      super(3, ownerDocument);
+      this._text = String(text ?? "");
+    }
+  }
+
+  class FakeElement extends FakeNode {
+    constructor(tagName, ownerDocument) {
+      super(1, ownerDocument);
+      this.tagName = String(tagName).toUpperCase();
+      this.attributes = new Map();
+      this.style = { cssText: "" };
+      this.listeners = new Map();
+      this.value = "";
+      this.checked = false;
+      this.type = "";
+    }
+
+    setAttribute(name, value) {
+      this.attributes.set(name, String(value));
+      if (name === "value") this.value = String(value);
+      if (name === "type") this.type = String(value);
+    }
+
+    getAttribute(name) {
+      return this.attributes.has(name) ? this.attributes.get(name) : null;
+    }
+
+    addEventListener(type, handler) {
+      const rows = this.listeners.get(type) || [];
+      rows.push(handler);
+      this.listeners.set(type, rows);
+    }
+
+    dispatchEvent(event) {
+      const handlers = this.listeners.get(event.type) || [];
+      for (const handler of handlers) handler.call(this, event);
+      return true;
+    }
+
+    click() {
+      const event = {
+        type: "click",
+        preventDefault() {},
+        stopPropagation() {},
+      };
+      this.dispatchEvent(event);
+    }
+
+    focus() {}
+
+    querySelectorAll(selector) {
+      const selectors = selector.split(",").map((part) => part.trim()).filter(Boolean);
+      const out = [];
+      const visit = (node) => {
+        if (!(node instanceof FakeElement)) return;
+        if (selectors.some((part) => matchesSelector(node, part))) out.push(node);
+        for (const child of node.childNodes) visit(child);
+      };
+      for (const child of this.childNodes) visit(child);
+      return out;
+    }
+
+    querySelector(selector) {
+      return this.querySelectorAll(selector)[0] || null;
+    }
+  }
+
+  function matchesSelector(el, selector) {
+    const match = selector.match(/^([a-zA-Z0-9_-]+)(?:\[([^=\]]+)=['"]?([^"'\\]]+)['"]?\])?$/);
+    if (!match) return false;
+    const [, tag, attrName, attrValue] = match;
+    if (tag && el.tagName.toLowerCase() !== tag.toLowerCase()) return false;
+    if (!attrName) return true;
+    return el.getAttribute(attrName) === attrValue;
+  }
+
+  class FakeDocument {
+    constructor() {
+      this.body = new FakeElement("body", this);
+      this.title = "Format Test Chat";
+    }
+
+    createElement(tagName) {
+      return new FakeElement(tagName, this);
+    }
+
+    createTextNode(text) {
+      return new FakeTextNode(text, this);
+    }
+
+    querySelector(selector) {
+      return this.body.querySelector(selector);
+    }
+
+    querySelectorAll(selector) {
+      return this.body.querySelectorAll(selector);
+    }
+  }
+
+  const document = new FakeDocument();
+  globalThis.document = document;
+  globalThis.Element = FakeElement;
+  globalThis.Node = { TEXT_NODE: 3, ELEMENT_NODE: 1 };
+  globalThis.getComputedStyle = () => ({
+    display: "block",
+    visibility: "visible",
+    opacity: "1",
+  });
+  return document;
+}
+
 describe("ai-chat export formats", () => {
   test("renders txt as readable plain text instead of raw markdown syntax", () => {
     const { app } = loadApp();
@@ -156,7 +325,163 @@ describe("ai-chat export formats", () => {
     });
 
     expect(app.config.fmt).toBe("std");
-    expect(app.getFormatLabel()).toBe("標準Markdown");
+    expect(app.getFormatLabel()).toBe("Markdown");
     expect(app.config.txtHeader).toBe(false);
+  });
+
+  test("shows plain text in the config dialog and switches to txt when clicked", async () => {
+    const { app } = loadApp();
+    setupUiDom();
+
+    const pending = app.showConfigDialog();
+    const formatButtons = globalThis.document.body.querySelectorAll("button");
+    const txtButton = formatButtons.find((button) => button.textContent.includes("プレーンテキスト"));
+
+    expect(txtButton).toBeDefined();
+
+    txtButton.click();
+
+    expect(app.config.fmt).toBe("txt");
+
+    const headerToggle = globalThis.document.body
+      .querySelectorAll("input")
+      .find((input) => input.getAttribute("type") === "checkbox");
+
+    expect(headerToggle).toBeDefined();
+
+    const startButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "開始");
+
+    expect(startButton).toBeDefined();
+    startButton.click();
+
+    await expect(pending).resolves.toBe(true);
+  });
+
+  test("shows save formats in the intended button order", async () => {
+    const { app } = loadApp();
+    setupUiDom();
+
+    const pending = app.showConfigDialog();
+    const labels = ["Markdown", "プレーンテキスト", "Obsidian向け", "JSON"];
+    const buttons = globalThis.document.body
+      .querySelectorAll("button")
+      .map((button) => {
+        const text = button.textContent;
+        return labels.find((label) => text.includes(label)) || null;
+      })
+      .filter(Boolean);
+
+    expect(buttons).toEqual(["Markdown", "プレーンテキスト", "Obsidian向け", "JSON"]);
+
+    const startButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "開始");
+    startButton.click();
+
+    await expect(pending).resolves.toBe(true);
+  });
+
+  test("uses Markdown as the standard markdown format label", () => {
+    const { app } = loadApp();
+
+    expect(app.getFormatLabel()).toBe("Markdown");
+  });
+
+  test("keeps the previous rerun result available and lets the user switch back to it", async () => {
+    const { app } = loadApp();
+    const previous = app.createResultSnapshot(
+      [
+        { role: "User", content: "old prompt" },
+        { role: "Model", content: "old answer" },
+      ],
+      { status: "PASS", score: 100 },
+      { preset: "normal" },
+    );
+    const current = app.createResultSnapshot(
+      [
+        { role: "User", content: "new prompt" },
+        { role: "Model", content: "new answer" },
+        { role: "User", content: "follow up" },
+      ],
+      { status: "WARN", score: 75 },
+      { preset: "careful" },
+    );
+
+    const calls = [];
+    app.showResultDialog = async (messages, quality, options = {}) => {
+      calls.push({
+        messages: messages.map((message) => message.content),
+        quality,
+        options,
+      });
+
+      if (calls.length === 1) {
+        expect(options.alternateSnapshot.messages[0].content).toBe("old prompt");
+        expect(options.alternateButtonLabel).toBe("前回結果を見る");
+        return { action: "show_alternate_result" };
+      }
+
+      expect(options.alternateSnapshot.messages[0].content).toBe("new prompt");
+      expect(options.alternateButtonLabel).toBe("今回結果を見る");
+      return { action: "done_clipboard", saveState: "clipboard" };
+    };
+
+    const resolved = await app.resolveResultDialogChoice(current, previous);
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0].messages).toEqual(["new prompt", "new answer", "follow up"]);
+    expect(calls[1].messages).toEqual(["old prompt", "old answer"]);
+    expect(resolved.result.action).toBe("done_clipboard");
+    expect(resolved.snapshot.messages.map((message) => message.content)).toEqual([
+      "old prompt",
+      "old answer",
+    ]);
+  });
+
+  test("uses the previous rerun snapshot as the comparison base in the result dialog", async () => {
+    const { app } = loadApp();
+    setupUiDom();
+
+    const previous = app.createResultSnapshot(
+      [
+        { role: "User", content: "old prompt" },
+        { role: "Model", content: "old answer" },
+      ],
+      { status: "PASS", score: 100 },
+      { preset: "normal" },
+    );
+
+    const pending = app.showResultDialog(
+      [
+        { role: "User", content: "new prompt" },
+        { role: "Model", content: "new answer" },
+        { role: "User", content: "follow up" },
+      ],
+      { status: "WARN", score: 75 },
+      {
+        alternateSnapshot: previous,
+        alternateTitle: "再実行前の結果を保持中",
+        alternateButtonLabel: "前回結果を見る",
+        preset: "careful",
+      },
+    );
+
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("比較ベース: 前回結果 2件");
+    expect(text).toContain("前回結果: 2件 / 今回: 3件（差分 +1件）");
+    expect(text).not.toContain("比較ベース: なし（保存済みなし）");
+    expect(text).not.toContain("前回データなし");
+
+    const cancelButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "中止");
+
+    expect(cancelButton).toBeDefined();
+    cancelButton.click();
+
+    await expect(pending).resolves.toEqual({ action: "cancel" });
   });
 });

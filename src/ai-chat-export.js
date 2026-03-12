@@ -2,7 +2,7 @@ javascript:(async()=>{'use strict';
 /**
  * AIチャット書き出し（日本語UI）
  * - 対象: ChatGPT (chatgpt.com / chat.openai.com) / Google AI Studio (aistudio.google.com) / Grok (grok系 / x.com/i/grok) / フォールバック
- * - 形式: 標準Markdown（デフォルト）/ Obsidian向け / JSON / プレーンテキスト
+ * - 形式: Markdown（デフォルト）/ プレーンテキスト / Obsidian向け / JSON
  * - 重要: サイトの表示や規約変更で壊れる可能性があります。壊れたら直す前提の個人ツールです。
  */
 
@@ -25,33 +25,37 @@ const THEME = {
   mono:'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
 };
 
-const FORMAT_ORDER = ['std', 'obs', 'json', 'txt'];
-const FORMAT_DEFS = Object.freeze({
+const ENABLE_OBSIDIAN_FORMAT = true;
+const BASE_FORMAT_DEFS = {
   std: Object.freeze({
-    label:'標準Markdown',
+    label:'Markdown',
     hint:'読みやすい普通の.md',
     ext:'md',
     mime:'text/markdown;charset=utf-8'
-  }),
-  obs: Object.freeze({
-    label:'Obsidian向け',
-    hint:'callout形式',
-    ext:'md',
-    mime:'text/markdown;charset=utf-8'
-  }),
-  json: Object.freeze({
-    label:'JSON',
-    hint:'機械処理向け',
-    ext:'json',
-    mime:'application/json;charset=utf-8'
   }),
   txt: Object.freeze({
     label:'プレーンテキスト',
     hint:'装飾なしのテキスト',
     ext:'txt',
     mime:'text/plain;charset=utf-8'
+  }),
+  json: Object.freeze({
+    label:'JSON',
+    hint:'機械処理向け',
+    ext:'json',
+    mime:'application/json;charset=utf-8'
   })
-});
+};
+const FORMAT_DEFS = Object.freeze(ENABLE_OBSIDIAN_FORMAT ? {
+  ...BASE_FORMAT_DEFS,
+  obs: Object.freeze({
+    label:'Obsidian向け',
+    hint:'callout形式',
+    ext:'md',
+    mime:'text/markdown;charset=utf-8'
+  })
+} : BASE_FORMAT_DEFS);
+const FORMAT_ORDER = ENABLE_OBSIDIAN_FORMAT ? ['std', 'txt', 'obs', 'json'] : ['std', 'txt', 'json'];
 
 function normalizeFormatId(fmt){
   return Object.prototype.hasOwnProperty.call(FORMAT_DEFS, fmt) ? fmt : 'std';
@@ -1205,6 +1209,7 @@ class App{
     this.config = this.loadConfig();
     this.abortState = {aborted:false};
     this.busyOverlay = null;
+    this.pendingRerunSnapshot = null;
   }
 
   storageKeys(){
@@ -1280,7 +1285,7 @@ class App{
       careful: { scrollMax: 96, scrollDelay: 420, autoExpand:true,  expandMaxClicks: 80, expandClickDelay: 150 }
     };
     return {
-      fmt:'std', // std|obs|json|txt
+      fmt:'std', // std|txt|json|obs?
       txtHeader:true,
       preset:'normal',
       presets,
@@ -1443,17 +1448,143 @@ class App{
     return Utils.djb2(`${messages.length}\u0002${payload}`);
   }
 
-  diffInfo(messages){
-    const {previous, lastAttempt} = this.loadRunMeta();
+  diffInfo(messages, comparisonSnapshot=null){
+    const {previous: savedPrevious, lastAttempt} = this.loadRunMeta();
     const nowCount = messages.length;
     const nowDigest = this.computeRunDigest(messages);
-    if (!previous || !Number.isFinite(previous.count)) return {previous:null, now:{count:nowCount,digest:nowDigest}, lastAttempt};
+    let previous = savedPrevious;
+    let previousLabel = '前回';
+    let comparisonKind = 'saved';
+
+    if (comparisonSnapshot && Array.isArray(comparisonSnapshot.messages)){
+      previous = {
+        count: comparisonSnapshot.messages.length,
+        digest: this.computeRunDigest(comparisonSnapshot.messages)
+      };
+      previousLabel = '前回結果';
+      comparisonKind = 'snapshot';
+    }
+
+    if (!previous || !Number.isFinite(previous.count)){
+      return {previous:null, now:{count:nowCount,digest:nowDigest}, lastAttempt, previousLabel, comparisonKind};
+    }
     const diff = nowCount - previous.count;
     const diffAbs = Math.abs(diff);
     const rate = previous.count>0 ? diffAbs/previous.count : 0;
     const stable = diffAbs<=1 || rate<=0.01;
     const digestSame = previous.digest && previous.digest===nowDigest;
-    return {previous, now:{count:nowCount,digest:nowDigest}, lastAttempt, diff, diffAbs, rate, stable, digestSame};
+    return {previous, now:{count:nowCount,digest:nowDigest}, lastAttempt, diff, diffAbs, rate, stable, digestSame, previousLabel, comparisonKind};
+  }
+
+  cloneMessages(messages){
+    if (!Array.isArray(messages)) return [];
+    return messages.map(m=>({
+      role: m?.role || 'Unknown',
+      content: String(m?.content || ''),
+      sig: m?.sig || null
+    }));
+  }
+
+  cloneQuality(quality){
+    return quality && typeof quality === 'object' ? {...quality} : null;
+  }
+
+  createResultSnapshot(messages, quality, extra={}){
+    return {
+      messages: this.cloneMessages(messages),
+      quality: this.cloneQuality(quality),
+      preset: extra.preset || this.config.preset,
+      createdAt: extra.createdAt || Utils.nowIso()
+    };
+  }
+
+  getPresetLabelFor(preset){
+    return preset==='fast'?'はやい' : preset==='careful'?'ていねい' : 'ふつう';
+  }
+
+  buildResultSnapshotSummaryLines(snapshot){
+    if (!snapshot) return [];
+    const lines = [
+      `会話数: ${(snapshot.messages || []).length}件`,
+      `取得モード: ${this.getPresetLabelFor(snapshot.preset)}`
+    ];
+    if (snapshot.quality){
+      lines.push(`判定: ${snapshot.quality.status || 'WARN'}（${snapshot.quality.score ?? 0}点）`);
+    }
+    return lines;
+  }
+
+  async resolveResultDialogChoice(primarySnapshot, alternateSnapshot=null){
+    let current = primarySnapshot;
+    let alternate = alternateSnapshot;
+    for(;;){
+      const showingPrimary = current === primarySnapshot;
+      const result = await this.showResultDialog(current.messages, current.quality, {
+        preset: current?.preset || this.config.preset,
+        alternateSnapshot: alternate,
+        alternateTitle: showingPrimary ? '再実行前の結果を保持中' : '今回の再取得結果も保持中',
+        alternateButtonLabel: showingPrimary ? '前回結果を見る' : '今回結果を見る'
+      });
+      if (result?.action==='show_alternate_result' && alternate){
+        const previousCurrent = current;
+        current = alternate;
+        alternate = previousCurrent;
+        continue;
+      }
+      return {result, snapshot: current};
+    }
+  }
+
+  handleRunDialogResult(result, snapshot, attemptId){
+    const selectedSnapshot = snapshot || this.createResultSnapshot([], null, {preset:this.config.preset});
+    const selectedMessages = selectedSnapshot.messages || [];
+    const selectedQuality = selectedSnapshot.quality || null;
+    const selectedDiff = this.diffInfo(selectedMessages);
+    const selectedMode = selectedSnapshot.preset || this.config.preset;
+
+    if (result?.action==='done_clipboard' || result?.action==='done_file'){
+      this.pendingRerunSnapshot = null;
+      this.saveRunMeta({
+        count:selectedMessages.length,
+        digest:selectedDiff.now.digest,
+        at:Utils.nowIso(),
+        saveState: result.saveState || result.action,
+        run_mode: selectedMode,
+        quality_status: selectedQuality?.status || 'WARN',
+        quality_score: selectedQuality?.score ?? 0,
+        message_count: selectedMessages.length,
+        run_id: attemptId
+      });
+      this.setRunAttemptStatus('success', {attempt_id: attemptId, count: selectedMessages.length, mode: selectedMode});
+      return;
+    }
+
+    if (result?.action==='rerun' || result?.action==='rerun_careful'){
+      this.pendingRerunSnapshot = this.createResultSnapshot(selectedMessages, selectedQuality, {preset:selectedMode});
+      this.setRunAttemptStatus('rerun_requested', {
+        attempt_id: attemptId,
+        count: selectedMessages.length,
+        mode: selectedMode,
+        next_action: result.action
+      });
+      return;
+    }
+
+    if (result?.action==='cancel'){
+      this.setRunAttemptStatus('cancel', {
+        attempt_id: attemptId,
+        count: selectedMessages.length,
+        mode: selectedMode
+      });
+      return;
+    }
+
+    this.setRunAttemptStatus('aborted', {
+      attempt_id: attemptId,
+      count: selectedMessages.length,
+      mode: selectedMode,
+      next_action: result?.action || 'unknown'
+    });
   }
 
   // ---- UI primitives ----
@@ -1702,7 +1833,7 @@ class App{
     const abortedLast = diff?.lastAttempt?.status==='aborted' || diff?.lastAttempt?.status==='cancel';
     if (diff?.previous){
       const sign = diff.diff>0?'+':'';
-      diffLine = `前回: ${diff.previous.count}件 / 今回: ${diff.now.count}件（差分 ${sign}${diff.diff}件）`;
+      diffLine = `${diff.previousLabel || '前回'}: ${diff.previous.count}件 / 今回: ${diff.now.count}件（差分 ${sign}${diff.diff}件）`;
       if (!diff.stable && diff.rate>=0.12){
         hint = '前回との差が大きいです。スクロールが途中で止まった可能性があります。';
       } else if (diff.digestSame){
@@ -1718,7 +1849,7 @@ class App{
   }
 
   getPresetLabel(){
-    return this.config.preset==='fast'?'はやい' : this.config.preset==='careful'?'ていねい' : 'ふつう';
+    return this.getPresetLabelFor(this.config.preset);
   }
   getFormatId(){
     return normalizeFormatId(this.config.fmt);
@@ -1824,8 +1955,12 @@ class App{
     return `直近試行: ${suffix}${c}`;
   }
 
-  comparisonBaseLabel(previous){
-    return Number.isFinite(previous?.count) ? `比較ベース: ${previous.count}件` : '比較ベース: なし（保存済みなし）';
+  comparisonBaseLabel(diff){
+    if (Number.isFinite(diff?.previous?.count)){
+      const prefix = diff?.comparisonKind === 'snapshot' ? `${diff.previousLabel || '前回結果'} ` : '';
+      return `比較ベース: ${prefix}${diff.previous.count}件`;
+    }
+    return '比較ベース: なし（保存済みなし）';
   }
 
   async confirmRerunDialog(mode='normal'){
@@ -1837,8 +1972,8 @@ class App{
       const modal = Utils.el('div',{style:`width:min(640px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
         Utils.el('div',{text:title,style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
-        Utils.el('div',{text:'この操作は、今出ている抽出結果を破棄して先頭から再取得します。',style:`font-size:14px;line-height:1.6;color:${THEME.fg};font-weight:700;`}),
-        Utils.el('div',{text:'保存は再取得後にしてください。',style:`margin-top:6px;font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
+        Utils.el('div',{text:'この操作は、今出ている抽出結果を保持したまま先頭から再取得します。',style:`font-size:14px;line-height:1.6;color:${THEME.fg};font-weight:700;`}),
+        Utils.el('div',{text:'再取得後に今回結果と前回結果を見比べて選べます。',style:`margin-top:6px;font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
       ]);
 
       const body = Utils.el('div',{style:'padding:18px 22px;display:grid;gap:10px;font-size:14px;line-height:1.6;color:'+THEME.fg+';'});
@@ -2041,7 +2176,7 @@ class App{
       return {fileName:this.makeFileName(title), output: out.trim()+'\n'};
     }
 
-    if (formatId==='obs'){
+    if (ENABLE_OBSIDIAN_FORMAT && formatId==='obs'){
       out += yaml;
       out += `# ${title}\n\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n\n---\n\n`;
       for (const m of messages){
@@ -2081,9 +2216,13 @@ class App{
     }
   }
 
-  async showResultDialog(messages, quality){
+  async showResultDialog(messages, quality, options={}){
     return new Promise(resolve=>{
-      const diff = this.diffInfo(messages);
+      const alternateSnapshot = options?.alternateSnapshot || null;
+      const alternateTitle = options?.alternateTitle || '保持中の結果';
+      const alternateButtonLabel = options?.alternateButtonLabel || '別の結果を見る';
+      const resultPreset = options?.preset || this.config.preset;
+      const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
       const title = this.adapter.getTitle();
       const {fileName, output} = this.formatOutput(messages, quality, diff);
@@ -2118,7 +2257,7 @@ class App{
       body.appendChild(compact);
 
       const grid = Utils.el('div',{style:'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;'});
-      const baseLabel = this.comparisonBaseLabel(diff.previous);
+      const baseLabel = this.comparisonBaseLabel(diff);
       const diffChip = (()=>{
         if (!diff.previous) return this.chip('前回', 'なし', THEME.muted);
         const sign = diff.diff>0?'+':'';
@@ -2131,11 +2270,20 @@ class App{
       grid.append(
         this.chip('会話数', `${messages.length}件`),
         this.chip('比較', baseLabel),
-        this.chip('速度', this.getPresetLabel()),
+        this.chip('速度', this.getPresetLabelFor(resultPreset)),
         this.chip('形式', this.getFormatLabel()),
         diffChip
       );
       body.appendChild(grid);
+
+      if (alternateSnapshot){
+        const altBox = Utils.el('div',{style:`margin-top:12px;padding:12px 14px;border-radius:14px;border:1px solid ${THEME.border};background:${THEME.bg};display:grid;gap:6px;`});
+        altBox.appendChild(Utils.el('div',{text:alternateTitle,style:`font-size:14px;line-height:1.55;color:${THEME.muted};font-weight:700;`}));
+        for (const line of this.buildResultSnapshotSummaryLines(alternateSnapshot)){
+          altBox.appendChild(Utils.el('div',{text:line,style:`font-size:14px;line-height:1.6;color:${THEME.fg};font-weight:500;`}));
+        }
+        body.appendChild(altBox);
+      }
 
       const previewData = this.buildOutputPreviewText(output);
 
@@ -2224,8 +2372,9 @@ class App{
         finish(action);
       };
 
-      footer.append(
+      const footerButtons = [
         this.btn('中止','subtle', ()=>finish({action:'cancel'})),
+        alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
         this.btn('再実行','secondary', async ()=>{
           const ok = await this.confirmRerunDialog('normal');
           if (ok) finish({action:'rerun'});
@@ -2260,7 +2409,8 @@ class App{
             finish({action:'done_fail', saveState:'failed'});
           }
         })
-      );
+      ].filter(Boolean);
+      footer.append(...footerButtons);
 
       modal.append(header, body, footer);
       ov.appendChild(modal);
@@ -2291,49 +2441,20 @@ class App{
         mode: this.config.preset,
         reason: 'no_messages'
       });
+      if (this.pendingRerunSnapshot){
+        Utils.toast('再取得に失敗したため、保持していた前回結果を再表示します。', 'warn', 4200);
+        const fallback = await this.resolveResultDialogChoice(this.pendingRerunSnapshot, null);
+        this.handleRunDialogResult(fallback.result, fallback.snapshot, attemptId);
+        return fallback.result;
+      }
       Utils.toast('会話を見つけられませんでした。ページ表示が変わったか、未対応の可能性があります。', 'error', 4200);
       return {action:'cancel'};
     }
 
-    // run meta 保存（保存/コピーの前に更新すると、失敗時にズレるので、結果ダイアログで確定後に保存）
-    const diff = this.diffInfo(messages);
-    const result = await this.showResultDialog(messages, quality);
-
-    if (result?.action==='done_clipboard' || result?.action==='done_file'){
-      this.saveRunMeta({
-        count:messages.length,
-        digest:diff.now.digest,
-        at:Utils.nowIso(),
-        saveState: result.saveState || result.action,
-        run_mode: this.config.preset,
-        run_id: attemptId,
-        quality_status: quality?.status || 'WARN',
-        quality_score: quality?.score ?? 0,
-        message_count: messages.length
-      });
-      this.setRunAttemptStatus('success', {attempt_id: attemptId, count: messages.length, mode: this.config.preset});
-    }else if (result?.action==='rerun' || result?.action==='rerun_careful'){
-      this.setRunAttemptStatus('rerun_requested', {
-        attempt_id: attemptId,
-        count: messages.length,
-        mode: this.config.preset,
-        next_action: result.action
-      });
-    }else if (result?.action==='cancel'){
-      this.setRunAttemptStatus('cancel', {
-        attempt_id: attemptId,
-        count: messages.length,
-        mode: this.config.preset
-      });
-    }else{
-      this.setRunAttemptStatus('aborted', {
-        attempt_id: attemptId,
-        count: messages.length,
-        mode: this.config.preset,
-        next_action: result?.action || 'unknown'
-      });
-    }
-    return result;
+    const currentSnapshot = this.createResultSnapshot(messages, quality, {preset:this.config.preset});
+    const chosen = await this.resolveResultDialogChoice(currentSnapshot, this.pendingRerunSnapshot);
+    this.handleRunDialogResult(chosen.result, chosen.snapshot, attemptId);
+    return chosen.result;
   }
 
   async run(){

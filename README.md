@@ -4,14 +4,19 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 
 ## Start Here
 
+- `ai-chat-export.bookmarklet.oneliner.js`
+  - Recommended bookmarklet for real browser bookmark editors
 - `ai-chat-export.public.oneliner.js`
-  - Recommended self-contained bookmarklet
+  - Feature-rich self-contained bookmarklet
+  - Use this when you want the richer result dialog and your browser can save longer bookmarklets
 
-This is the only bookmarklet kept at the repository root for beginners. It does not rely on external `fetch` or external `script src`, so it is more reliable on CSP-restricted sites like ChatGPT.
+`ai-chat-export.bookmarklet.oneliner.js` is the shortest root bookmarklet and is the first thing to try when a browser bookmark editor truncates long URLs. It is the same build as `variants/ai-chat-export.public.minimal.oneliner.js`.
+
+`ai-chat-export.public.oneliner.js` stays available as the fuller self-contained build. Both avoid external `fetch` and external `script src`, so they work better on CSP-restricted sites like ChatGPT.
 
 ## Quick Start
 
-1. Open `ai-chat-export.public.oneliner.js`
+1. Open `ai-chat-export.bookmarklet.oneliner.js`
 2. Copy the entire line into a browser bookmark URL field
 3. Run it on a chat page
 

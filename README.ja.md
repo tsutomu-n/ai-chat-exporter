@@ -19,21 +19,35 @@ Web 上の AI チャットは、その場では読めても、あとから整理
 - ChatGPT / Grok / Google AI Studio 向けの専用アダプタを内蔵
 - 長い会話を上端・下端までたどるための自動スクロール
 - `続きを読む` / `Show more` などの展開ボタンを自動クリック
-- 標準Markdown / Obsidian向け / JSON / プレーンテキスト の 4 形式で出力
+- Markdown / プレーンテキスト / Obsidian向け / JSON の 4 形式で出力
 - 保存前プレビュー、品質判定、詳細ログ表示
 - ファイル保存とクリップボード保存の両対応
 - 実行モードや出力形式を `localStorage` に保存し、次回起動時に再利用
 
 ## 最初に使うファイル
 
+- `ai-chat-export.bookmarklet.oneliner.js`
+  - ブックマーク編集欄向けの第一推奨
+  - `variants/ai-chat-export.public.minimal.oneliner.js` と同じ中身
+  - 保存形式は `Markdown / プレーンテキスト` の 2 つだけ
+  - `保存内容プレビュー` `詳細判定` `手動コピー欄` を外した短い版
 - `ai-chat-export.public.oneliner.js`
-  - 第一推奨の自己完結型ブックマークレット
+  - 高機能な自己完結型ブックマークレット
+  - 結果確認ダイアログを含む通常版
+- `variants/ai-chat-export.public.no-obs.oneliner.js`
+  - Obsidian 向け形式を削った軽量版
+- `variants/ai-chat-export.public.no-obs.encoded.oneliner.js`
+  - ブックマーク保存との相性を優先した bookmark-safe 軽量版
 
-初心者向けに `root` に残してあるのはこの 1 本だけです。外部 `fetch` や外部 `script src` を使わないため、ChatGPT のように CSP が厳しいサイトでも動きやすい構成です。
+`ai-chat-export.bookmarklet.oneliner.js` は root に置く最短のブックマークレットで、ブックマーク URL 欄が長い文字列を切るブラウザではまずこれを試す構成です。`ai-chat-export.public.oneliner.js` は高機能版として残しています。どちらも外部 `fetch` や外部 `script src` を使わないため、ChatGPT のように CSP が厳しいサイトでも動きやすい構成です。
+
+ブックマーク保存時に URL が切れるブラウザ向けに、より短い `minimal` 版も用意しています。これは `old.js` より短いことを狙った版で、保存形式は `Markdown / プレーンテキスト` の 2 つだけです。
+
+特にブックマークレットとして保存できない場合は、まず `ai-chat-export.bookmarklet.oneliner.js` を試してください。その次に `variants/ai-chat-export.public.no-obs.oneliner.js`、最後に `variants/ai-chat-export.public.no-obs.encoded.oneliner.js` を試す順を推奨します。
 
 ## 最短手順
 
-1. `ai-chat-export.public.oneliner.js` を開く
+1. `ai-chat-export.bookmarklet.oneliner.js` を開く
 2. 中身を全部コピーして、ブラウザのブックマーク URL 欄へ貼る
 3. ChatGPT / Grok / Google AI Studio の会話ページで実行する
 4. 設定ダイアログで実行モードと出力形式を選ぶ
@@ -49,7 +63,7 @@ Web 上の AI チャットは、その場では読めても、あとから整理
 
 ## 出力形式
 
-- `標準Markdown`
+- `Markdown`
   - 普通の `.md` として読みやすい形式
 - `Obsidian向け`
   - callout を含む、ノート管理向けの Markdown
