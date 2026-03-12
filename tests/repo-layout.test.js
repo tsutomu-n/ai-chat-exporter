@@ -168,9 +168,20 @@ describe("repository layout", () => {
     expect(existsSync(rootPath(".gitignore"))).toBe(true);
 
     const gitignore = readRepoFile(".gitignore");
+    expect(gitignore).toContain("# Local Codex working files");
     expect(gitignore).toContain(".ai_memory/");
+    expect(gitignore).toContain("# Dependencies");
+    expect(gitignore).toContain("node_modules/");
+    expect(gitignore).toContain("# Test output");
     expect(gitignore).toContain("coverage/");
+    expect(gitignore).toContain("# Environment files");
+    expect(gitignore).toContain(".env");
+    expect(gitignore).toContain(".env.*");
+    expect(gitignore).toContain("# Editor and OS noise");
     expect(gitignore).toContain(".DS_Store");
+    expect(gitignore).toContain(".vscode/");
+    expect(gitignore).toContain(".idea/");
+    expect(gitignore).toContain("*.log");
 
     expect(existsSync(rootPath(".ai_memory"))).toBe(false);
   });
