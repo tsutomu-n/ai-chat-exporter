@@ -11,8 +11,8 @@
 
 ## 推奨順
 
-1. Chrome / Chromium 系: `bookmarklet.oneliner`
-2. Firefox: `unified.bookmarklet.oneliner`
+1. Chrome / Chromium 系: `ai-chat-export.chrome.bookmarklet.oneliner.js`
+2. Firefox: `ai-chat-export.firefox.bookmarklet.oneliner.js`
 
 ## Docs
 

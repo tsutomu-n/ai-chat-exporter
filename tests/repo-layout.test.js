@@ -137,6 +137,8 @@ describe("repository layout", () => {
     for (const page of pages) {
       expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
       expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+      expect(page).not.toContain("bookmarklet.oneliner`");
+      expect(page).not.toContain("unified.bookmarklet.oneliner`");
       expect(page).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
       expect(page).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
       expect(page).toContain("Chrome");
@@ -191,16 +193,16 @@ describe("repository layout", () => {
     const readmeJa = readRepoFile("README.ja.md");
 
     expect(readme).toContain("Public Repository Notes");
+    expect(readme).toContain("Local-only files");
     expect(readme).toContain(".ai_memory/");
     expect(readme).toContain("AGENTS.md");
     expect(readme).toContain(".agents/");
-    expect(readme).not.toContain(".agents/skills/");
 
     expect(readmeJa).toContain("## 公開リポジトリ向けメモ");
+    expect(readmeJa).toContain("ローカル専用ファイル");
     expect(readmeJa).toContain(".ai_memory/");
     expect(readmeJa).toContain("AGENTS.md");
     expect(readmeJa).toContain(".agents/");
-    expect(readmeJa).not.toContain(".agents/skills/");
   });
 
   test("ships a Firefox-safe ASCII unified bookmarklet variant", () => {

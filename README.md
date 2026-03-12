@@ -47,9 +47,7 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 
 ## Public Repository Notes
 
-- Keep `AGENTS.md` and `.agents/` as local-only Codex working files outside the public repository.
-- Keep `.ai_memory/` out of the repository. It is local Codex working memory and is ignored by `.gitignore`.
-- Keep generated coverage output out of the repository.
+Local-only files such as `.ai_memory/`, `AGENTS.md`, `.agents/`, and generated test output are excluded from the public repository.
 
 ## Development
 
