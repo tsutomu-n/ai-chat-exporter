@@ -4,16 +4,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SRC="${ROOT_DIR}/src/ai-chat-export.js"
-MIN_OUT="${ROOT_DIR}/dist/ai-chat-export.min.js"
-OUT="${ROOT_DIR}/dist/ai-chat-export.oneliner.js"
+ARCHIVE_DIR="${ROOT_DIR}/archive"
+ARCHIVE_DIST_DIR="${ROOT_DIR}/archive/dist"
+ARCHIVE_BOOKMARKLET_DIR="${ROOT_DIR}/archive/bookmarklets"
+ARCHIVE_VARIANTS_DIR="${ROOT_DIR}/archive/variants"
+ARCHIVE_LOADERS_DIR="${ROOT_DIR}/archive/loaders"
+MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.min.js"
+OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.oneliner.js"
 BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.bookmarklet.oneliner.js"
-PUBLIC_MIN_OUT="${ROOT_DIR}/dist/ai-chat-export.public.min.js"
-PUBLIC_OUT="${ROOT_DIR}/ai-chat-export.public.oneliner.js"
-LITE_PUBLIC_MIN_OUT="${ROOT_DIR}/dist/ai-chat-export.public.no-obs.min.js"
-LITE_PUBLIC_OUT="${ROOT_DIR}/variants/ai-chat-export.public.no-obs.oneliner.js"
-LITE_PUBLIC_ENCODED_OUT="${ROOT_DIR}/variants/ai-chat-export.public.no-obs.encoded.oneliner.js"
-MINIMAL_PUBLIC_MIN_OUT="${ROOT_DIR}/dist/ai-chat-export.public.minimal.min.js"
-MINIMAL_PUBLIC_OUT="${ROOT_DIR}/variants/ai-chat-export.public.minimal.oneliner.js"
+PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.min.js"
+PUBLIC_OUT="${ARCHIVE_BOOKMARKLET_DIR}/ai-chat-export.public.oneliner.js"
+LITE_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.no-obs.min.js"
+LITE_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.public.no-obs.oneliner.js"
+LITE_PUBLIC_ENCODED_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.public.no-obs.encoded.oneliner.js"
+MINIMAL_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.minimal.min.js"
+MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.public.minimal.oneliner.js"
 export BUN_TMPDIR="${BUN_TMPDIR:-${TMPDIR:-/tmp}}"
 export BUN_INSTALL="${BUN_INSTALL:-${BUN_TMPDIR%/}/bun-install}"
 TMP_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.body.XXXXXX.js")"
@@ -29,7 +34,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "${ROOT_DIR}/variants"
+mkdir -p "${ARCHIVE_DIST_DIR}" "${ARCHIVE_BOOKMARKLET_DIR}" "${ARCHIVE_VARIANTS_DIR}" "${ARCHIVE_LOADERS_DIR}"
 
 node - "${SRC}" "${TMP_BODY}" "${TMP_LITE_BODY}" "${TMP_MINIMAL_BODY}" <<'NODE'
 const fs = require('fs');

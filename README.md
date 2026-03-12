@@ -1,39 +1,36 @@
 # AI Chat Export
 
-Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and Google AI Studio, with Markdown, JSON, and plain-text outputs.
+Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and Google AI Studio.
 
 ## Start Here
 
 - `ai-chat-export.bookmarklet.oneliner.js`
-  - Recommended bookmarklet for real browser bookmark editors
-- `ai-chat-export.public.oneliner.js`
-  - Feature-rich self-contained bookmarklet
-  - Use this when you want the richer result dialog and your browser can save longer bookmarklets
+  - The only primary distribution file
+  - Short enough for real browser bookmark editors
+  - Self-contained, so it does not rely on external `fetch` or `script src`
 
-`ai-chat-export.bookmarklet.oneliner.js` is the shortest root bookmarklet and is the first thing to try when a browser bookmark editor truncates long URLs. It is the same build as `variants/ai-chat-export.public.minimal.oneliner.js`.
+## What It Does
 
-`ai-chat-export.public.oneliner.js` stays available as the fuller self-contained build. Both avoid external `fetch` and external `script src`, so they work better on CSP-restricted sites like ChatGPT.
+- walks long chats from top to bottom
+- expands folded content such as `Show more`
+- exports readable `Markdown` or `Plain Text`
+- shows a quality check before saving
+- supports file save and clipboard copy
 
 ## Quick Start
 
 1. Open `ai-chat-export.bookmarklet.oneliner.js`
 2. Copy the entire line into a browser bookmark URL field
-3. Run it on a chat page
+3. Run it on a supported chat page
 
-## Developer Files
+## Repository Layout
 
-- `dist/ai-chat-export.public.min.js`
-  - DevTools Console / Snippets version
-- `dist/ai-chat-export.min.js`
-  - Minified main script for GitHub Pages hosting
-- `dist/ai-chat-export.oneliner.js`
-  - Non-public one-line bookmarklet build
-- `loaders/ai-chat-export.github-pages.oneliner.js`
-  - `script src` loader bookmarklet
-- `loaders/ai-chat-export.github-pages.fetch-loader.oneliner.js`
-  - `fetch + eval` loader bookmarklet
+- `ai-chat-export.bookmarklet.oneliner.js`
+  - active bookmarklet
 - `src/ai-chat-export.js`
-  - Readable source
+  - readable source
+- `archive/README.ja.md`
+  - legacy builds, experimental variants, and developer-only outputs
 
 ## Supported Sites
 
@@ -44,21 +41,8 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 
 ## Docs
 
+- `docs/README.ja.md`
 - `docs/public-bookmarklet.ja.md`
-- `docs/bookmarklet-loader.ja.md`
-- `docs/github-pages-setup.ja.md`
-
-## Screenshots
-
-Store UI screenshots in `assets/screenshots/`.
-
-- Screenshot guide: `assets/README.ja.md`
-- Recommended captures:
-  1. [Bookmark edit dialog](assets/screenshots/01-bookmark-edit.png)
-  2. [Run configuration dialog](assets/screenshots/02-config-dialog.png)
-  3. [Careful-mode progress dialog](assets/screenshots/03-careful-progress.png)
-  4. [Quality / result dialog](assets/screenshots/04-quality-dialog.png)
-  5. [Exported Markdown example](assets/screenshots/05-exported-markdown.png)
 
 ## Development
 

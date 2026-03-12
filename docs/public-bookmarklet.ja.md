@@ -1,28 +1,18 @@
-# public 版ブックマークレットの使い方
+# ブックマークレットの使い方
 
 ## 最初に使うファイル
 
 - `./ai-chat-export.bookmarklet.oneliner.js`
 
-このファイルが、現在の第一推奨です。
-
-理由:
-
-- 短いのでブックマーク編集欄で保存されやすい
-- 自己完結型
-- 外部 `fetch` や外部 `script src` がない
-- ChatGPT の CSP に止められにくい
-
-高機能版を使いたい場合は `./ai-chat-export.public.oneliner.js` を使います。
+このファイルが現在の第一推奨です。ブックマーク編集欄に保存しやすい長さを優先し、通常利用で必要な機能だけを残しています。過去の高機能版や派生版は repository 側の `archive/README.ja.md` にまとめています。
 
 ## 使い方
 
 1. `ai-chat-export.bookmarklet.oneliner.js` を開く
 2. 中身を全部コピーする
 3. ブラウザで新しいブックマークを作る
-4. 名前を `AI Chat Export` などにする
-5. URL 欄へコピーした1行をそのまま貼る
-6. 保存する
+4. URL 欄へ 1 行をそのまま貼る
+5. 保存する
 
 ## 確認ポイント
 
@@ -32,28 +22,12 @@
 
 ## 実行方法
 
-1. ChatGPT / Grok / AI Studio の会話ページを開く
+1. ChatGPT / Grok / Google AI Studio の会話ページを開く
 2. ブックマークをクリックする
 3. 設定ダイアログが出れば成功
 
 ## 動かない時
 
-### 1. 何も起きない
-
-確認:
-
-- 保存した URL が途中で切れていないか
-- 先頭が `javascript:` で始まっているか
-
-### 2. Console では動くがブックマークでは動かない
-
-この場合は、ブックマーク保存時に URL が切れている可能性が高いです。
-
-### 3. 代替手段
-
-ブックマークで難しい場合は次を使います。
-
-- `./ai-chat-export.public.oneliner.js`
-- `./ai-chat-export.public.min.js`
-
-`./ai-chat-export.public.oneliner.js` は長い代わりに高機能版です。`./ai-chat-export.public.min.js` は DevTools の Console か Snippets で使えます。
+- 保存した URL が途中で切れていないか確認する
+- 先頭が `javascript:` で始まっているか確認する
+- それでも難しい場合は repository 側の `archive/README.ja.md` にある legacy 配布物を検討する

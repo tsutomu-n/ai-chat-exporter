@@ -1,1 +1,0 @@
-javascript:(async()=>{const u='https://tsutomu-n.github.io/ai-chat-exporter/ai-chat-export.min.js?v=20260310';try{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);(0,eval)(await r.text())}catch(e){alert(`AI Chat Export loader failed: ${e?.message||e}`)}})()
