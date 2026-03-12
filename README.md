@@ -4,21 +4,13 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 
 ## Recommended Files
 
-- `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
-  - Recommended for ChatGPT and Claude
-- `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
-  - Recommended for Google AI Studio and Grok
-- `ai-chat-export.claude.bookmarklet.oneliner.js`
-  - Smallest Claude-only build
-
-Integrated builds are also available:
-
 - `ai-chat-export.bookmarklet.oneliner.js`
+  - Integrated build for Chrome / Chromium browsers
 - `ai-chat-export.unified.bookmarklet.oneliner.js`
-  - compact integrated build with a simpler result dialog
-  - more bookmark-editor-friendly on Firefox
+  - Compact integrated build for Firefox
+  - Simpler result dialog and shorter bookmark payload
 
-`ai-chat-export.bookmarklet.oneliner.js` can still be too long for some bookmark editors. If you want one integrated file, try `ai-chat-export.unified.bookmarklet.oneliner.js` first. In practice, the split variants are still the safest.
+Specialized split variants are kept in `archive/README.ja.md` only.
 
 ## What It Does
 
@@ -30,27 +22,20 @@ Integrated builds are also available:
 
 ## Quick Start
 
-1. Open `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js` or `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
+1. Open `ai-chat-export.bookmarklet.oneliner.js` on Chrome / Chromium, or `ai-chat-export.unified.bookmarklet.oneliner.js` on Firefox
 2. Copy the entire line into a browser bookmark URL field
 3. Run it on a supported chat page
 
 ## Repository Layout
 
 - `ai-chat-export.bookmarklet.oneliner.js`
-  - ASCII unified bookmarklet
+  - ASCII unified bookmarklet for Chrome / Chromium
 - `ai-chat-export.unified.bookmarklet.oneliner.js`
-  - compact ASCII unified bookmarklet
-  - Firefox-friendlier integrated build
-- `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
-  - recommended for ChatGPT and Claude
-- `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
-  - recommended for Google AI Studio and Grok
-- `ai-chat-export.claude.bookmarklet.oneliner.js`
-  - Claude-only shortest build
+  - compact ASCII unified bookmarklet for Firefox
 - `src/ai-chat-export.js`
   - readable source
 - `archive/README.ja.md`
-  - legacy builds, experimental variants, and developer-only outputs
+  - archived split builds, experimental variants, and developer-only outputs
 
 ## Supported Sites
 
@@ -63,7 +48,7 @@ Integrated builds are also available:
 ## Docs
 
 - `docs/README.ja.md`
-- `docs/public-bookmarklet.ja.md`
+- `docs/codex-cli-frontend-setup.ja.md`
 
 ## Development
 

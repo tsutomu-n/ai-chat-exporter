@@ -2,23 +2,20 @@
 
 ## 最初に使うべきファイル
 
-- `./ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
-  - ChatGPT / Claude 向けの第一推奨
-- `./ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
-  - Google AI Studio / Grok 向けの第一推奨
-- `./ai-chat-export.claude.bookmarklet.oneliner.js`
-  - Claude 専用の最短版
+- `./ai-chat-export.bookmarklet.oneliner.js`
+  - Chrome / Chromium 系で使う統合版
+- `./ai-chat-export.unified.bookmarklet.oneliner.js`
+  - Firefox で使う軽量統合版
 
-統合版の `./ai-chat-export.bookmarklet.oneliner.js` と `./ai-chat-export.unified.bookmarklet.oneliner.js` もあります。1 本で使いたい場合は、結果確認 UI を軽くした `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試すのが安全です。過去の高機能版、派生版、Console 用、ローダー版は repository 側の `archive/README.ja.md` に退避しました。
+Chrome / Chromium 系では `./ai-chat-export.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.unified.bookmarklet.oneliner.js` を使う前提に整理しています。過去の分割版、派生版、Console 用ファイルは repository 側の `archive/README.ja.md` に退避しました。
 
 ## 最短手順
 
-1. 対応サイトに応じて `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js` または `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js` を開く
+1. ブラウザに応じて `ai-chat-export.bookmarklet.oneliner.js` または `ai-chat-export.unified.bookmarklet.oneliner.js` を開く
 2. 中身を全部コピーして、ブラウザのブックマーク URL 欄へ貼る
 3. 対応サイトの会話ページで実行する
 
 ## 詳細ドキュメント
 
-- [public-bookmarklet.ja.md](./public-bookmarklet.ja.md)
-- [bookmarklet-loader.ja.md](./bookmarklet-loader.ja.md)
-- [github-pages-setup.ja.md](./github-pages-setup.ja.md)
+- [README.ja.md](./README.ja.md)
+- [codex-cli-frontend-setup.ja.md](./codex-cli-frontend-setup.ja.md)

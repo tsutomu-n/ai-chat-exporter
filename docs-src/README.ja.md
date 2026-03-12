@@ -2,25 +2,19 @@
 
 ## いま使うファイル
 
-- `./ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
-  - ChatGPT / Claude 向けの第一推奨
-- `./ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
-  - Google AI Studio / Grok 向けの第一推奨
-- `./ai-chat-export.claude.bookmarklet.oneliner.js`
-  - Claude 専用の最短版
+- `./ai-chat-export.bookmarklet.oneliner.js`
+  - Chrome / Chromium 系向けの統合版
+- `./ai-chat-export.unified.bookmarklet.oneliner.js`
+  - Firefox 向けの軽量統合版
 
-統合版の `./ai-chat-export.bookmarklet.oneliner.js` と `./ai-chat-export.unified.bookmarklet.oneliner.js` もあります。1 本で使いたい場合は、結果確認 UI を軽くした `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試すのが安全です。高機能版や比較用の派生版、Console 用ファイル、ローダー版は repository 側の `archive/README.ja.md` に退避しています。
+通常は Chrome / Chromium 系では `./ai-chat-export.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.unified.bookmarklet.oneliner.js` を使います。過去の分割版、比較用の派生版、Console 用ファイルは repository 側の `archive/README.ja.md` に退避しています。
 
 ## 推奨順
 
-1. `chatgpt-claude.bookmarklet.oneliner`
-2. `aistudio-grok.bookmarklet.oneliner`
-3. `claude.bookmarklet.oneliner`
-4. `bookmarklet.oneliner` / `unified.bookmarklet.oneliner`
+1. Chrome / Chromium 系: `bookmarklet.oneliner`
+2. Firefox: `unified.bookmarklet.oneliner`
 
 ## Docs
 
 - [README.ja.md](./README.ja.md)
-- [public-bookmarklet.ja.md](./public-bookmarklet.ja.md)
-- [bookmarklet-loader.ja.md](./bookmarklet-loader.ja.md)
-- [github-pages-setup.ja.md](./github-pages-setup.ja.md)
+- [codex-cli-frontend-setup.ja.md](./codex-cli-frontend-setup.ja.md)
