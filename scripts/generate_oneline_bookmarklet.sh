@@ -298,7 +298,7 @@ unifiedFirefox = replaceRegex(
         resolve(action);
       };
 
-      footer.append(
+      const footerButtons = [
         this.btn('中止','subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
         this.btn('再実行','secondary', async ()=>{
@@ -324,7 +324,9 @@ unifiedFirefox = replaceRegex(
           const ok = this.downloadFile(fileName, output);
           finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
         })
-      );
+      ].filter(Boolean);
+
+      footer.append(...footerButtons);
 
       modal.append(body, footer);
       ov.appendChild(modal);

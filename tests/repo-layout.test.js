@@ -254,5 +254,6 @@ describe("repository layout", () => {
     expect(unified.length).toBeLessThan(generic.length);
     expect(unified.length).toBeLessThan(62000);
     expect(/[^\x00-\x7F]/.test(unified)).toBe(false);
+    expect(unified).toContain(".filter(Boolean)");
   });
 });
