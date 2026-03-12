@@ -1463,6 +1463,23 @@ class App{
     this.config.expandClickDelay = p.expandClickDelay;
   }
 
+  configForRun(presetOverride=null){
+    if (!presetOverride || presetOverride===this.config.preset){
+      return this.config;
+    }
+    const presetConfig = this.config.presets?.[presetOverride];
+    if (!presetConfig) return this.config;
+    return {
+      ...this.config,
+      preset: presetOverride,
+      scrollMax: presetConfig.scrollMax,
+      scrollDelay: presetConfig.scrollDelay,
+      autoExpand: presetConfig.autoExpand,
+      expandMaxClicks: presetConfig.expandMaxClicks,
+      expandClickDelay: presetConfig.expandClickDelay
+    };
+  }
+
   // ---- run meta (diff) ----
   loadRunMeta(){
     const {runMetaKey, legacyRunMetaKeys} = this.storageKeys();
@@ -1669,7 +1686,7 @@ class App{
       return;
     }
 
-    if (result?.action==='rerun' || result?.action==='rerun_careful'){
+    if (result?.action==='rerun_careful'){
       this.pendingRerunSnapshot = this.createResultSnapshot(selectedMessages, selectedQuality, {preset:selectedMode});
       this.setRunAttemptStatus('rerun_requested', {
         attempt_id: attemptId,
@@ -1987,7 +2004,7 @@ class App{
     return `"${s.replace(/\\/g,'\\\\').replace(/\"/g,'\\\"').replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/\t/g,'\\t')}"`;
   }
 
-  buildExportMetadata(title, messages, quality, diff){
+  buildExportMetadata(title, messages, quality, diff, preset=this.config.preset){
     const warning = this.warningSummary({quality, diff});
     return {
       title: title,
@@ -1995,7 +2012,7 @@ class App{
       conversation_url: location.href,
       saved_at: Utils.formatDateJST(new Date()),
       message_count: messages.length,
-      preset: this.config.preset,
+      preset,
       format: this.getFormatId(),
       quality_status: quality?.status || 'WARN',
       quality_score: quality?.score ?? 0,
@@ -2073,10 +2090,10 @@ class App{
     return '比較ベース: なし（保存済みなし）';
   }
 
-  async confirmRerunDialog(mode='normal'){
-    const modeLabel = mode==='careful' ? 'ていねい' : '通常';
-    const title = mode==='careful' ? 'ていねいで再実行の確認' : '再実行の確認';
-    const actionLabel = mode==='careful' ? 'ていねいで再実行する' : '再実行する';
+  async confirmRerunDialog(mode='careful'){
+    const modeLabel = 'ていねい';
+    const title = 'ていねいに再実行の確認';
+    const actionLabel = 'ていねいに再実行する';
     return new Promise(resolve=>{
       const ov = this.overlay();
       const modal = Utils.el('div',{style:`width:min(640px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
@@ -2248,14 +2265,14 @@ class App{
     return this.buildOutputPreviewText(output);
   }
 
-  formatOutput(messages, quality, diff){
+  formatOutput(messages, quality, diff, preset=this.config.preset){
     const title = this.adapter.getTitle();
     const savedAt = Utils.formatDateJST(new Date());
     const site = this.adapter.label;
     const url = location.href;
     const formatId = this.getFormatId();
     const formatDef = this.getFormatDef();
-    const metadata = this.buildExportMetadata(title, messages, quality, diff);
+    const metadata = this.buildExportMetadata(title, messages, quality, diff, preset);
     const yaml = this.dumpYaml(metadata);
 
     if (formatId==='json'){
@@ -2335,7 +2352,7 @@ class App{
       const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
       const title = this.adapter.getTitle();
-      const {fileName, output} = this.formatOutput(messages, quality, diff);
+      const {fileName, output} = this.formatOutput(messages, quality, diff, resultPreset);
       const byteSize = new TextEncoder().encode(output).length;
       let currentFileName = fileName;
 
@@ -2485,11 +2502,7 @@ class App{
       const footerButtons = [
         this.btn('中止','subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn('再実行','secondary', async ()=>{
-          const ok = await this.confirmRerunDialog('normal');
-          if (ok) finish({action:'rerun'});
-        }),
-        this.btn('ていねいで再実行','secondary', async ()=>{
+        this.btn('ていねいに再実行','secondary', async ()=>{
           const ok = await this.confirmRerunDialog('careful');
           if (ok) finish({action:'rerun_careful'});
         }),
@@ -2528,16 +2541,18 @@ class App{
     });
   }
 
-  async runOnce({skipConfig=false}={}){
+  async runOnce({skipConfig=false, presetOverride=null}={}){
     const proceed = skipConfig ? true : await this.showConfigDialog();
     if (!proceed) return {action:'cancel'};
 
+    const effectiveConfig = this.configForRun(presetOverride);
+    const effectivePreset = effectiveConfig.preset || this.config.preset;
     this.abortState = {aborted:false};
-    const attemptId = this.markRunAttemptStart(this.config.preset);
+    const attemptId = this.markRunAttemptStart(effectivePreset);
     this.showBusyDialog();
     let res=null;
     try{
-      res = await ScrollEngine.harvest(this.adapter, this.config, (p)=>this.updateBusyDialog(p), this.abortState);
+      res = await ScrollEngine.harvest(this.adapter, effectiveConfig, (p)=>this.updateBusyDialog(p), this.abortState);
     } finally {
       this.closeBusyDialog();
     }
@@ -2548,7 +2563,7 @@ class App{
     if (!messages.length){
       this.setRunAttemptStatus('failed', {
         attempt_id: attemptId,
-        mode: this.config.preset,
+        mode: effectivePreset,
         reason: 'no_messages'
       });
       if (this.pendingRerunSnapshot){
@@ -2561,7 +2576,7 @@ class App{
       return {action:'cancel'};
     }
 
-    const currentSnapshot = this.createResultSnapshot(messages, quality, {preset:this.config.preset});
+    const currentSnapshot = this.createResultSnapshot(messages, quality, {preset:effectivePreset});
     const chosen = await this.resolveResultDialogChoice(currentSnapshot, this.pendingRerunSnapshot);
     this.handleRunDialogResult(chosen.result, chosen.snapshot, attemptId);
     return chosen.result;
@@ -2574,12 +2589,8 @@ class App{
         const r = await this.runOnce(rerunOptions);
         rerunOptions = {skipConfig:true};
         if (!r || r.action==='cancel') break;
-        if (r.action==='rerun'){
-          continue;
-        }
         if (r.action==='rerun_careful'){
-          this.applyPreset('careful');
-          this.saveConfig();
+          rerunOptions = {skipConfig:true, presetOverride:'careful'};
           continue;
         }
         break;

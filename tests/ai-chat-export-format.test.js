@@ -389,6 +389,44 @@ describe("ai-chat export formats", () => {
     expect(app.getFormatLabel()).toBe("Markdown");
   });
 
+  test("shows only one careful rerun action in the result dialog", async () => {
+    const { app } = loadApp();
+    setupUiDom();
+
+    const confirmModes = [];
+    app.confirmRerunDialog = async (mode) => {
+      confirmModes.push(mode);
+      return true;
+    };
+
+    const pending = app.showResultDialog(
+      [
+        { role: "User", content: "prompt" },
+        { role: "Model", content: "answer" },
+      ],
+      { status: "WARN", score: 75 },
+      { preset: "normal" },
+    );
+
+    const labels = globalThis.document.body
+      .querySelectorAll("button")
+      .map((button) => button.textContent);
+
+    expect(labels).toContain("ていねいに再実行");
+    expect(labels).not.toContain("再実行");
+    expect(labels).not.toContain("ていねいで再実行");
+
+    const rerunButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "ていねいに再実行");
+
+    expect(rerunButton).toBeDefined();
+    rerunButton.click();
+
+    await expect(pending).resolves.toEqual({ action: "rerun_careful" });
+    expect(confirmModes).toEqual(["careful"]);
+  });
+
   test("keeps the previous rerun result available and lets the user switch back to it", async () => {
     const { app } = loadApp();
     const previous = app.createResultSnapshot(
@@ -483,5 +521,60 @@ describe("ai-chat export formats", () => {
     cancelButton.click();
 
     await expect(pending).resolves.toEqual({ action: "cancel" });
+  });
+
+  test("reruns carefully without persisting the preset change", async () => {
+    const { app } = loadApp({
+      storedConfig: {
+        fmt: "std",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: false,
+      },
+    });
+
+    const calls = [];
+    app.runOnce = async (options = {}) => {
+      calls.push({ options: { ...options }, preset: app.config.preset });
+      return calls.length === 1 ? { action: "rerun_careful" } : { action: "cancel" };
+    };
+
+    await app.run();
+
+    expect(calls).toEqual([
+      { options: { skipConfig: false }, preset: "normal" },
+      { options: { skipConfig: true, presetOverride: "careful" }, preset: "normal" },
+    ]);
+    expect(app.config.preset).toBe("normal");
+  });
+
+  test("uses the effective rerun preset in export metadata when provided", () => {
+    const { app } = loadApp({
+      storedConfig: {
+        fmt: "std",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: false,
+      },
+    });
+
+    const metadata = app.buildExportMetadata(
+      "Format Test Chat",
+      [{ role: "User", content: "prompt" }],
+      { status: "PASS", score: 100 },
+      { previous: null, lastAttempt: null },
+      "careful",
+    );
+
+    expect(metadata.preset).toBe("careful");
+    expect(app.config.preset).toBe("normal");
   });
 });

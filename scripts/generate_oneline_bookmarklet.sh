@@ -103,7 +103,7 @@ minimal = replaceExact(
 minimal = removeBetween(
   minimal,
   "  buildQualityDetailText(quality){",
-  "  formatOutput(messages, quality, diff){",
+  "  formatOutput(messages, quality, diff, preset=this.config.preset){",
   'quality and preview helpers',
 );
 minimal = removeBetween(
@@ -203,16 +203,16 @@ unifiedFirefox = replaceRegex(
 );
 unifiedFirefox = replaceRegex(
   unifiedFirefox,
-  /\n\s*buildExportMetadata\(title, messages, quality, diff\)\{[\s\S]*?\n\s*formatOutput\(messages, quality, diff\)\{/,
+  /\n\s*buildExportMetadata\(title, messages, quality, diff, preset=this\.config\.preset\)\{[\s\S]*?\n\s*formatOutput\(messages, quality, diff, preset=this\.config\.preset\)\{/,
   `
-  buildExportMetadata(title, messages, quality, diff){
+  buildExportMetadata(title, messages, quality, diff, preset=this.config.preset){
     return {
       title,
       site: this.adapter.label,
       conversation_url: location.href,
       saved_at: Utils.formatDateJST(new Date()),
       message_count: messages.length,
-      preset: this.config.preset,
+      preset,
       format: this.getFormatId(),
       quality_status: quality?.status || 'WARN',
       quality_score: quality?.score ?? 0,
@@ -251,7 +251,7 @@ unifiedFirefox = replaceRegex(
   }
 
   async confirmRerunDialog(mode='normal'){
-    const label = mode==='careful' ? 'ていねいで再実行' : '再実行';
+    const label = mode==='careful' ? 'ていねいに再実行' : '再実行';
     return window.confirm(\`\${label}しますか？\\n現在の結果は保持したまま再取得します。\`);
   }
 
@@ -263,12 +263,12 @@ unifiedFirefox = replaceRegex(
     return \`\${stamp}_\${base}.\${this.getFormatDef().ext}\`;
   }
 
-  formatOutput(messages, quality, diff){`,
+  formatOutput(messages, quality, diff, preset=this.config.preset){`,
   'unified Firefox compact export/output helpers',
 );
 unifiedFirefox = replaceRegex(
   unifiedFirefox,
-  /\n\s*async showResultDialog\(messages, quality, options=\{\}\)\{[\s\S]*?\n\s*async runOnce\(\{skipConfig=false\}=\{\}\)\{/,
+  /\n\s*async showResultDialog\(messages, quality, options=\{\}\)\{[\s\S]*?\n\s*async runOnce\(\{skipConfig=false, presetOverride=null\}=\{\}\)\{/,
   `
   async showResultDialog(messages, quality, options={}){
     return new Promise(resolve=>{
@@ -277,7 +277,7 @@ unifiedFirefox = replaceRegex(
       const resultPreset = options?.preset || this.config.preset;
       const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
-      const {fileName, output} = this.formatOutput(messages, quality, diff);
+      const {fileName, output} = this.formatOutput(messages, quality, diff, resultPreset);
 
       const ov = this.overlay();
       const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
@@ -301,10 +301,7 @@ unifiedFirefox = replaceRegex(
       const footerButtons = [
         this.btn('中止','subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn('再実行','secondary', async ()=>{
-          if (await this.confirmRerunDialog('normal')) finish({action:'rerun'});
-        }),
-        this.btn('ていねい','secondary', async ()=>{
+        this.btn('ていねいに再実行','secondary', async ()=>{
           if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
         }),
         this.btn('コピー','secondary', async ()=>{
@@ -334,7 +331,7 @@ unifiedFirefox = replaceRegex(
     });
   }
 
-  async runOnce({skipConfig=false}={}){`,
+  async runOnce({skipConfig=false, presetOverride=null}={}){`,
   'unified Firefox compact result dialog',
 );
 
