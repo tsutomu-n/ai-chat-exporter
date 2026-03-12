@@ -75,4 +75,14 @@ describe("repository layout", () => {
       expect(readme).not.toContain("`ai-chat-export.github-pages.oneliner.js`");
     }
   });
+
+  test("keeps the Japanese README focused on purpose and core features", () => {
+    const readmeJa = readRepoFile("README.ja.md");
+
+    expect(readmeJa).toContain("## このツールの目的");
+    expect(readmeJa).toContain("## 主な機能");
+    expect(readmeJa).toContain("長い AI チャット");
+    expect(readmeJa).toContain("品質判定");
+    expect(readmeJa).toContain("クリップボード");
+  });
 });
