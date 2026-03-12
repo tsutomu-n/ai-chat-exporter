@@ -24,13 +24,17 @@ describe("repository layout", () => {
     expect(existsSync(rootPath("README.md"))).toBe(true);
     expect(existsSync(rootPath("README.ja.md"))).toBe(true);
     expect(existsSync(rootPath("LICENSE"))).toBe(true);
-    expect(existsSync(rootPath("ai-chat-export.bookmarklet.oneliner.js"))).toBe(true);
-    expect(existsSync(rootPath("ai-chat-export.unified.bookmarklet.oneliner.js"))).toBe(true);
+    expect(existsSync(rootPath("ai-chat-export.chrome.bookmarklet.oneliner.js"))).toBe(true);
+    expect(existsSync(rootPath("ai-chat-export.firefox.bookmarklet.oneliner.js"))).toBe(true);
+    expect(existsSync(rootPath("ai-chat-export.bookmarklet.oneliner.js"))).toBe(false);
+    expect(existsSync(rootPath("ai-chat-export.unified.bookmarklet.oneliner.js"))).toBe(false);
     expect(existsSync(rootPath("ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js"))).toBe(false);
     expect(existsSync(rootPath("ai-chat-export.aistudio-grok.bookmarklet.oneliner.js"))).toBe(false);
     expect(existsSync(rootPath("ai-chat-export.claude.bookmarklet.oneliner.js"))).toBe(false);
-    expect(existsSync(rootPath("docs", "ai-chat-export.bookmarklet.oneliner.js"))).toBe(true);
-    expect(existsSync(rootPath("docs", "ai-chat-export.unified.bookmarklet.oneliner.js"))).toBe(true);
+    expect(existsSync(rootPath("docs", "ai-chat-export.chrome.bookmarklet.oneliner.js"))).toBe(true);
+    expect(existsSync(rootPath("docs", "ai-chat-export.firefox.bookmarklet.oneliner.js"))).toBe(true);
+    expect(existsSync(rootPath("docs", "ai-chat-export.bookmarklet.oneliner.js"))).toBe(false);
+    expect(existsSync(rootPath("docs", "ai-chat-export.unified.bookmarklet.oneliner.js"))).toBe(false);
     expect(existsSync(rootPath("docs", "ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js"))).toBe(false);
     expect(existsSync(rootPath("docs", "ai-chat-export.aistudio-grok.bookmarklet.oneliner.js"))).toBe(false);
     expect(existsSync(rootPath("docs", "ai-chat-export.claude.bookmarklet.oneliner.js"))).toBe(false);
@@ -68,7 +72,8 @@ describe("repository layout", () => {
     expect(generator).toContain('PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.min.js"');
     expect(generator).toContain('LITE_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.no-obs.min.js"');
     expect(generator).toContain('MINIMAL_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.minimal.min.js"');
-    expect(generator).toContain('UNIFIED_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.unified.bookmarklet.oneliner.js"');
+    expect(generator).toContain('CHROME_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.chrome.bookmarklet.oneliner.js"');
+    expect(generator).toContain('FIREFOX_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.firefox.bookmarklet.oneliner.js"');
     expect(generator).toContain('UNIFIED_FIREFOX_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.unified.firefox.minimal.min.js"');
     expect(generator).toContain('UNIFIED_FIREFOX_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.unified.firefox.minimal.oneliner.js"');
     expect(generator).toContain('CHATGPT_CLAUDE_MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.chatgpt-claude.minimal.oneliner.js"');
@@ -80,10 +85,10 @@ describe("repository layout", () => {
     expect(generator).toContain('CLAUDE_MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.claude.minimal.oneliner.js"');
 
     const syncAssets = readRepoFile("scripts", "sync_docs_assets.sh");
-    expect(syncAssets).toContain("ai-chat-export.bookmarklet.oneliner.js");
-    expect(syncAssets).toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
-    expect(syncAssets).toContain("docs/ai-chat-export.bookmarklet.oneliner.js");
-    expect(syncAssets).toContain("docs/ai-chat-export.unified.bookmarklet.oneliner.js");
+    expect(syncAssets).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(syncAssets).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+    expect(syncAssets).toContain("docs/ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(syncAssets).toContain("docs/ai-chat-export.firefox.bookmarklet.oneliner.js");
     expect(syncAssets).toContain("docs/ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js");
     expect(syncAssets).toContain("docs/ai-chat-export.aistudio-grok.bookmarklet.oneliner.js");
     expect(syncAssets).toContain("docs/ai-chat-export.claude.bookmarklet.oneliner.js");
@@ -100,8 +105,10 @@ describe("repository layout", () => {
     const readme = readRepoFile("README.md");
     const readmeJa = readRepoFile("README.ja.md");
 
-    expect(readme).toContain("ai-chat-export.bookmarklet.oneliner.js");
-    expect(readme).toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+    expect(readme).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
+    expect(readme).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
     expect(readme).toContain("Chrome");
     expect(readme).toContain("Firefox");
     expect(readme).toContain("archive/README.ja.md");
@@ -116,8 +123,10 @@ describe("repository layout", () => {
 
     expect(readmeJa).toContain("## このツールの目的");
     expect(readmeJa).toContain("## 主な機能");
-    expect(readmeJa).toContain("ai-chat-export.bookmarklet.oneliner.js");
-    expect(readmeJa).toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
+    expect(readmeJa).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(readmeJa).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+    expect(readmeJa).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
+    expect(readmeJa).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
     expect(readmeJa).toContain("Chrome");
     expect(readmeJa).toContain("Firefox");
     expect(readmeJa).toContain("統合版");
@@ -142,8 +151,10 @@ describe("repository layout", () => {
     ];
 
     for (const page of pages) {
-      expect(page).toContain("ai-chat-export.bookmarklet.oneliner.js");
-      expect(page).toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
+      expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+      expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+      expect(page).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
+      expect(page).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
       expect(page).toContain("Chrome");
       expect(page).toContain("Firefox");
       expect(page).toContain("archive/README.ja.md");
@@ -156,11 +167,11 @@ describe("repository layout", () => {
   });
 
   test("keeps the docs bookmarklet asset synced with the root bookmarklet", () => {
-    expect(readRepoFile("ai-chat-export.bookmarklet.oneliner.js")).toBe(
-      readRepoFile("docs", "ai-chat-export.bookmarklet.oneliner.js"),
+    expect(readRepoFile("ai-chat-export.chrome.bookmarklet.oneliner.js")).toBe(
+      readRepoFile("docs", "ai-chat-export.chrome.bookmarklet.oneliner.js"),
     );
-    expect(readRepoFile("ai-chat-export.unified.bookmarklet.oneliner.js")).toBe(
-      readRepoFile("docs", "ai-chat-export.unified.bookmarklet.oneliner.js"),
+    expect(readRepoFile("ai-chat-export.firefox.bookmarklet.oneliner.js")).toBe(
+      readRepoFile("docs", "ai-chat-export.firefox.bookmarklet.oneliner.js"),
     );
   });
 
@@ -189,10 +200,10 @@ describe("repository layout", () => {
   });
 
   test("keeps the root bookmarklet alias synced with the archived minimal variant", () => {
-    expect(readRepoFile("ai-chat-export.bookmarklet.oneliner.js")).toBe(
+    expect(readRepoFile("ai-chat-export.chrome.bookmarklet.oneliner.js")).toBe(
       readRepoFile("archive", "variants", "ai-chat-export.public.minimal.oneliner.js"),
     );
-    expect(readRepoFile("ai-chat-export.unified.bookmarklet.oneliner.js")).toBe(
+    expect(readRepoFile("ai-chat-export.firefox.bookmarklet.oneliner.js")).toBe(
       readRepoFile("archive", "variants", "ai-chat-export.unified.firefox.minimal.oneliner.js"),
     );
   });
@@ -221,7 +232,7 @@ describe("repository layout", () => {
   });
 
   test("archives specialized shorter bookmarklet variants", () => {
-    const generic = readRepoFile("ai-chat-export.bookmarklet.oneliner.js");
+    const generic = readRepoFile("ai-chat-export.chrome.bookmarklet.oneliner.js");
     const chatgptClaude = readRepoFile("archive", "variants", "ai-chat-export.chatgpt-claude.minimal.oneliner.js");
     const aiStudioGrok = readRepoFile("archive", "variants", "ai-chat-export.aistudio-grok.minimal.oneliner.js");
     const claude = readRepoFile("archive", "variants", "ai-chat-export.claude.minimal.oneliner.js");
@@ -249,8 +260,8 @@ describe("repository layout", () => {
   });
 
   test("ships a Firefox-safe ASCII unified bookmarklet variant", () => {
-    const generic = readRepoFile("ai-chat-export.bookmarklet.oneliner.js");
-    const unified = readRepoFile("ai-chat-export.unified.bookmarklet.oneliner.js");
+    const generic = readRepoFile("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    const unified = readRepoFile("ai-chat-export.firefox.bookmarklet.oneliner.js");
 
     expect(unified).toContain("claude.ai");
     expect(unified).toContain("chatgpt.com");

@@ -4,9 +4,10 @@
 
 ## いま使うファイル
 
-- `../ai-chat-export.bookmarklet.oneliner.js`
-  - 現在の正式なブックマークレット
-  - ブックマーク編集欄へ保存しやすい最小版
+- `../ai-chat-export.chrome.bookmarklet.oneliner.js`
+  - Chrome / Chromium 系で使う現在の正式版
+- `../ai-chat-export.firefox.bookmarklet.oneliner.js`
+  - Firefox で使う現在の正式版
 
 ## アーカイブしたもの
 

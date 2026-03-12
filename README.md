@@ -4,9 +4,9 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 
 ## Recommended Files
 
-- `ai-chat-export.bookmarklet.oneliner.js`
+- `ai-chat-export.chrome.bookmarklet.oneliner.js`
   - Integrated build for Chrome / Chromium browsers
-- `ai-chat-export.unified.bookmarklet.oneliner.js`
+- `ai-chat-export.firefox.bookmarklet.oneliner.js`
   - Compact integrated build for Firefox
   - Simpler result dialog and shorter bookmark payload
 
@@ -22,15 +22,15 @@ Specialized split variants are kept in `archive/README.ja.md` only.
 
 ## Quick Start
 
-1. Open `ai-chat-export.bookmarklet.oneliner.js` on Chrome / Chromium, or `ai-chat-export.unified.bookmarklet.oneliner.js` on Firefox
+1. Open `ai-chat-export.chrome.bookmarklet.oneliner.js` on Chrome / Chromium, or `ai-chat-export.firefox.bookmarklet.oneliner.js` on Firefox
 2. Copy the entire line into a browser bookmark URL field
 3. Run it on a supported chat page
 
 ## Repository Layout
 
-- `ai-chat-export.bookmarklet.oneliner.js`
+- `ai-chat-export.chrome.bookmarklet.oneliner.js`
   - ASCII unified bookmarklet for Chrome / Chromium
-- `ai-chat-export.unified.bookmarklet.oneliner.js`
+- `ai-chat-export.firefox.bookmarklet.oneliner.js`
   - compact ASCII unified bookmarklet for Firefox
 - `src/ai-chat-export.js`
   - readable source

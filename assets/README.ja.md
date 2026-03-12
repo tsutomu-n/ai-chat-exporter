@@ -22,7 +22,7 @@ assets/
 
 1. `01-bookmark-edit.png`
    - ブックマーク編集画面
-   - URL 欄へ `ai-chat-export.bookmarklet.oneliner.js` を貼る場面
+   - URL 欄へ `ai-chat-export.chrome.bookmarklet.oneliner.js` を貼る場面
 
 2. `02-config-dialog.png`
    - 実行前の設定ダイアログ
