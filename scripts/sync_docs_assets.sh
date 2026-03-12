@@ -10,11 +10,6 @@ cp "${ROOT_DIR}/ai-chat-export.firefox.bookmarklet.oneliner.js" "${ROOT_DIR}/doc
 rm -f \
   "${ROOT_DIR}/docs/ai-chat-export.bookmarklet.oneliner.js" \
   "${ROOT_DIR}/docs/ai-chat-export.unified.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/docs/ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/docs/ai-chat-export.aistudio-grok.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/docs/ai-chat-export.claude.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/docs/ai-chat-export.public.oneliner.js" \
-  "${ROOT_DIR}/docs/ai-chat-export.public.min.js" \
   "${ROOT_DIR}/docs/ai-chat-export.min.js" \
   "${ROOT_DIR}/docs/ai-chat-export.github-pages.oneliner.js" \
   "${ROOT_DIR}/docs/ai-chat-export.github-pages.fetch-loader.oneliner.js"

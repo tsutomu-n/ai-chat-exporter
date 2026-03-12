@@ -7,7 +7,7 @@
 - `./ai-chat-export.firefox.bookmarklet.oneliner.js`
   - Firefox で使う軽量統合版
 
-Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.firefox.bookmarklet.oneliner.js` を使う前提に整理しています。過去の分割版、派生版、Console 用ファイルは repository 側の `archive/README.ja.md` に退避しました。
+Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.firefox.bookmarklet.oneliner.js` を使う前提に整理しています。公開リポジトリではこの 2 ファイルだけを配布対象にしています。
 
 ## 最短手順
 

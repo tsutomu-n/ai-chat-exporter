@@ -4,59 +4,30 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SRC="${ROOT_DIR}/src/ai-chat-export.js"
-ARCHIVE_DIR="${ROOT_DIR}/archive"
-ARCHIVE_DIST_DIR="${ROOT_DIR}/archive/dist"
-ARCHIVE_BOOKMARKLET_DIR="${ROOT_DIR}/archive/bookmarklets"
-ARCHIVE_VARIANTS_DIR="${ROOT_DIR}/archive/variants"
-ARCHIVE_LOADERS_DIR="${ROOT_DIR}/archive/loaders"
-MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.min.js"
-OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.oneliner.js"
 CHROME_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.chrome.bookmarklet.oneliner.js"
 FIREFOX_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.firefox.bookmarklet.oneliner.js"
-PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.min.js"
-PUBLIC_OUT="${ARCHIVE_BOOKMARKLET_DIR}/ai-chat-export.public.oneliner.js"
-LITE_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.no-obs.min.js"
-LITE_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.public.no-obs.oneliner.js"
-LITE_PUBLIC_ENCODED_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.public.no-obs.encoded.oneliner.js"
-MINIMAL_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.public.minimal.min.js"
-MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.public.minimal.oneliner.js"
-UNIFIED_FIREFOX_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.unified.firefox.minimal.min.js"
-UNIFIED_FIREFOX_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.unified.firefox.minimal.oneliner.js"
-CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.chatgpt-claude.minimal.min.js"
-CHATGPT_CLAUDE_MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.chatgpt-claude.minimal.oneliner.js"
-AISTUDIO_GROK_MINIMAL_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.aistudio-grok.minimal.min.js"
-AISTUDIO_GROK_MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.aistudio-grok.minimal.oneliner.js"
-CLAUDE_MINIMAL_PUBLIC_MIN_OUT="${ARCHIVE_DIST_DIR}/ai-chat-export.claude.minimal.min.js"
-CLAUDE_MINIMAL_PUBLIC_OUT="${ARCHIVE_VARIANTS_DIR}/ai-chat-export.claude.minimal.oneliner.js"
+DOCS_CHROME_BOOKMARKLET_OUT="${ROOT_DIR}/docs/ai-chat-export.chrome.bookmarklet.oneliner.js"
+DOCS_FIREFOX_BOOKMARKLET_OUT="${ROOT_DIR}/docs/ai-chat-export.firefox.bookmarklet.oneliner.js"
+
 export BUN_TMPDIR="${BUN_TMPDIR:-${TMPDIR:-/tmp}}"
 export BUN_INSTALL="${BUN_INSTALL:-${BUN_TMPDIR%/}/bun-install}"
-TMP_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.body.XXXXXX.js")"
-TMP_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.min.XXXXXX.js")"
-TMP_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.public.min.XXXXXX.js")"
-TMP_LITE_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.no-obs.body.XXXXXX.js")"
-TMP_LITE_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.no-obs.public.min.XXXXXX.js")"
+
 TMP_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.minimal.body.XXXXXX.js")"
-TMP_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.minimal.public.min.XXXXXX.js")"
 TMP_UNIFIED_FIREFOX_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.unified.firefox.body.XXXXXX.js")"
-TMP_UNIFIED_FIREFOX_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.unified.firefox.public.min.XXXXXX.js")"
-TMP_CHATGPT_CLAUDE_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.chatgpt-claude-minimal.body.XXXXXX.js")"
-TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.chatgpt-claude-minimal.public.min.XXXXXX.js")"
-TMP_AISTUDIO_GROK_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.aistudio-grok-minimal.body.XXXXXX.js")"
-TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.aistudio-grok-minimal.public.min.XXXXXX.js")"
-TMP_CLAUDE_MINIMAL_BODY="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.claude-minimal.body.XXXXXX.js")"
-TMP_CLAUDE_MINIMAL_PUBLIC_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.claude-minimal.public.min.XXXXXX.js")"
+TMP_CHROME_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.chrome.min.XXXXXX.js")"
+TMP_FIREFOX_MIN="$(mktemp "${TMPDIR:-/tmp}/ai-chat-export.firefox.min.XXXXXX.js")"
 
 cleanup() {
-  rm -f "${TMP_BODY}" "${TMP_MIN}" "${TMP_PUBLIC_MIN}" "${TMP_LITE_BODY}" "${TMP_LITE_PUBLIC_MIN}" "${TMP_MINIMAL_BODY}" "${TMP_MINIMAL_PUBLIC_MIN}" "${TMP_UNIFIED_FIREFOX_BODY}" "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}" "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}" "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}" "${TMP_CLAUDE_MINIMAL_BODY}" "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"
+  rm -f "${TMP_MINIMAL_BODY}" "${TMP_UNIFIED_FIREFOX_BODY}" "${TMP_CHROME_MIN}" "${TMP_FIREFOX_MIN}"
 }
 trap cleanup EXIT
 
-mkdir -p "${ARCHIVE_DIST_DIR}" "${ARCHIVE_BOOKMARKLET_DIR}" "${ARCHIVE_VARIANTS_DIR}" "${ARCHIVE_LOADERS_DIR}"
+mkdir -p "${ROOT_DIR}/docs"
 
-node - "${SRC}" "${TMP_BODY}" "${TMP_LITE_BODY}" "${TMP_MINIMAL_BODY}" "${TMP_UNIFIED_FIREFOX_BODY}" "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" "${TMP_CLAUDE_MINIMAL_BODY}" <<'NODE'
+node - "${SRC}" "${TMP_MINIMAL_BODY}" "${TMP_UNIFIED_FIREFOX_BODY}" <<'NODE'
 const fs = require('fs');
 
-const [, , srcPath, bodyPath, liteBodyPath, minimalBodyPath, unifiedFirefoxBodyPath, chatgptClaudeMinimalBodyPath, aiStudioGrokMinimalBodyPath, claudeMinimalBodyPath] = process.argv;
+const [, , srcPath, minimalBodyPath, unifiedFirefoxBodyPath] = process.argv;
 const source = fs.readFileSync(srcPath, 'utf8').replace(/^javascript:/, '');
 
 function replaceExact(text, from, to, label) {
@@ -142,27 +113,6 @@ minimal = replaceExact(
             }
           }`,
   'minimal clipboard prompt fallback',
-);
-
-const chatgptClaudeMinimal = replaceExact(
-  minimal,
-  "const adapters = [new ChatGPTAdapter(), new ClaudeAdapter(), new AIStudioAdapter(), new GrokAdapter(), new BaseAdapter()];",
-  "const adapters = [new ChatGPTAdapter(), new ClaudeAdapter(), new BaseAdapter()];",
-  'ChatGPT+Claude adapter factory',
-);
-
-const aiStudioGrokMinimal = replaceExact(
-  minimal,
-  "const adapters = [new ChatGPTAdapter(), new ClaudeAdapter(), new AIStudioAdapter(), new GrokAdapter(), new BaseAdapter()];",
-  "const adapters = [new AIStudioAdapter(), new GrokAdapter(), new BaseAdapter()];",
-  'AIStudio+Grok adapter factory',
-);
-
-const claudeMinimal = replaceExact(
-  minimal,
-  "const adapters = [new ChatGPTAdapter(), new ClaudeAdapter(), new AIStudioAdapter(), new GrokAdapter(), new BaseAdapter()];",
-  "const adapters = [new ClaudeAdapter(), new BaseAdapter()];",
-  'Claude-only adapter factory',
 );
 
 let unifiedFirefox = minimal;
@@ -332,77 +282,41 @@ unifiedFirefox = replaceRegex(
   'unified Firefox compact result dialog',
 );
 
-fs.writeFileSync(bodyPath, `${source}\n`);
-fs.writeFileSync(liteBodyPath, `${lite}\n`);
 fs.writeFileSync(minimalBodyPath, `${minimal}\n`);
 fs.writeFileSync(unifiedFirefoxBodyPath, `${unifiedFirefox}\n`);
-fs.writeFileSync(chatgptClaudeMinimalBodyPath, `${chatgptClaudeMinimal}\n`);
-fs.writeFileSync(aiStudioGrokMinimalBodyPath, `${aiStudioGrokMinimal}\n`);
-fs.writeFileSync(claudeMinimalBodyPath, `${claudeMinimal}\n`);
 NODE
 
 if command -v bunx >/dev/null 2>&1; then
-  bunx terser "${TMP_BODY}" --compress --mangle --format ascii_only=true --output "${TMP_MIN}"
-  bunx terser "${TMP_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_PUBLIC_MIN}"
-  bunx terser "${TMP_LITE_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_LITE_PUBLIC_MIN}"
-  bunx terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_MINIMAL_PUBLIC_MIN}"
-  bunx terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}"
-  bunx terser "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}"
-  bunx terser "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}"
-  bunx terser "${TMP_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"
+  bunx terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHROME_MIN}"
+  bunx terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
 else
-  npx --yes terser "${TMP_BODY}" --compress --mangle --format ascii_only=true --output "${TMP_MIN}"
-  npx --yes terser "${TMP_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_PUBLIC_MIN}"
-  npx --yes terser "${TMP_LITE_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_LITE_PUBLIC_MIN}"
-  npx --yes terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_MINIMAL_PUBLIC_MIN}"
-  npx --yes terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}"
-  npx --yes terser "${TMP_CHATGPT_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}"
-  npx --yes terser "${TMP_AISTUDIO_GROK_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}"
-  npx --yes terser "${TMP_CLAUDE_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}"
+  npx --yes terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHROME_MIN}"
+  npx --yes terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
 fi
-cp "${TMP_MIN}" "${MIN_OUT}"
-cp "${TMP_PUBLIC_MIN}" "${PUBLIC_MIN_OUT}"
-cp "${TMP_LITE_PUBLIC_MIN}" "${LITE_PUBLIC_MIN_OUT}"
-cp "${TMP_MINIMAL_PUBLIC_MIN}" "${MINIMAL_PUBLIC_MIN_OUT}"
-cp "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}" "${UNIFIED_FIREFOX_PUBLIC_MIN_OUT}"
-cp "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}" "${CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN_OUT}"
-cp "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}" "${AISTUDIO_GROK_MINIMAL_PUBLIC_MIN_OUT}"
-cp "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}" "${CLAUDE_MINIMAL_PUBLIC_MIN_OUT}"
 
-node - "${TMP_MIN}" "${OUT}" "${TMP_PUBLIC_MIN}" "${PUBLIC_OUT}" "${TMP_LITE_PUBLIC_MIN}" "${LITE_PUBLIC_OUT}" "${LITE_PUBLIC_ENCODED_OUT}" "${TMP_MINIMAL_PUBLIC_MIN}" "${MINIMAL_PUBLIC_OUT}" "${CHROME_BOOKMARKLET_OUT}" "${TMP_UNIFIED_FIREFOX_PUBLIC_MIN}" "${UNIFIED_FIREFOX_PUBLIC_OUT}" "${FIREFOX_BOOKMARKLET_OUT}" "${TMP_CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN}" "${CHATGPT_CLAUDE_MINIMAL_PUBLIC_OUT}" "${TMP_AISTUDIO_GROK_MINIMAL_PUBLIC_MIN}" "${AISTUDIO_GROK_MINIMAL_PUBLIC_OUT}" "${TMP_CLAUDE_MINIMAL_PUBLIC_MIN}" "${CLAUDE_MINIMAL_PUBLIC_OUT}" <<'NODE'
+node - "${TMP_CHROME_MIN}" "${CHROME_BOOKMARKLET_OUT}" "${DOCS_CHROME_BOOKMARKLET_OUT}" "${TMP_FIREFOX_MIN}" "${FIREFOX_BOOKMARKLET_OUT}" "${DOCS_FIREFOX_BOOKMARKLET_OUT}" <<'NODE'
 const fs = require('fs');
 
-const [, , minPath, outPath, publicMinPath, publicOutPath, litePublicMinPath, litePublicOutPath, litePublicEncodedOutPath, minimalPublicMinPath, minimalPublicOutPath, chromeBookmarkletOutPath, unifiedFirefoxPublicMinPath, unifiedFirefoxPublicOutPath, firefoxBookmarkletOutPath, chatgptClaudeMinimalPublicMinPath, chatgptClaudeMinimalPublicOutPath, aiStudioGrokMinimalPublicMinPath, aiStudioGrokMinimalPublicOutPath, claudeMinimalPublicMinPath, claudeMinimalPublicOutPath] = process.argv;
+const [, , chromeMinPath, chromeOutPath, docsChromeOutPath, firefoxMinPath, firefoxOutPath, docsFirefoxOutPath] = process.argv;
 
-for (const [srcPath, dstPath] of [[minPath, outPath], [publicMinPath, publicOutPath], [litePublicMinPath, litePublicOutPath], [minimalPublicMinPath, minimalPublicOutPath], [minimalPublicMinPath, chromeBookmarkletOutPath], [unifiedFirefoxPublicMinPath, unifiedFirefoxPublicOutPath], [unifiedFirefoxPublicMinPath, firefoxBookmarkletOutPath], [chatgptClaudeMinimalPublicMinPath, chatgptClaudeMinimalPublicOutPath], [aiStudioGrokMinimalPublicMinPath, aiStudioGrokMinimalPublicOutPath], [claudeMinimalPublicMinPath, claudeMinimalPublicOutPath]]) {
+for (const [srcPath, dstPath] of [
+  [chromeMinPath, chromeOutPath],
+  [chromeMinPath, docsChromeOutPath],
+  [firefoxMinPath, firefoxOutPath],
+  [firefoxMinPath, docsFirefoxOutPath],
+]) {
   let body = fs.readFileSync(srcPath, 'utf8').trim();
   if (!body.startsWith('javascript:')) body = `javascript:${body}`;
   fs.writeFileSync(dstPath, `${body}\n`);
   console.log(`Generated ${dstPath} (${body.length} chars)`);
 }
-
-let encodedBody = fs.readFileSync(litePublicMinPath, 'utf8').trim();
-if (!encodedBody.startsWith('javascript:')) encodedBody = `javascript:${encodedBody}`;
-encodedBody = encodeURI(encodedBody);
-fs.writeFileSync(litePublicEncodedOutPath, `${encodedBody}\n`);
-console.log(`Generated ${litePublicEncodedOutPath} (${encodedBody.length} chars)`);
 NODE
 
-echo "Generated ${MIN_OUT}"
-echo "Generated ${PUBLIC_MIN_OUT}"
-echo "Generated ${LITE_PUBLIC_MIN_OUT}"
-echo "Generated ${LITE_PUBLIC_ENCODED_OUT}"
-echo "Generated ${MINIMAL_PUBLIC_MIN_OUT}"
-echo "Generated ${UNIFIED_FIREFOX_PUBLIC_MIN_OUT}"
-echo "Generated ${CHATGPT_CLAUDE_MINIMAL_PUBLIC_MIN_OUT}"
-echo "Generated ${AISTUDIO_GROK_MINIMAL_PUBLIC_MIN_OUT}"
-echo "Generated ${CLAUDE_MINIMAL_PUBLIC_MIN_OUT}"
-echo "Generated ${CHROME_BOOKMARKLET_OUT}"
-echo "Generated ${UNIFIED_FIREFOX_PUBLIC_OUT}"
-echo "Generated ${FIREFOX_BOOKMARKLET_OUT}"
 rm -f \
   "${ROOT_DIR}/ai-chat-export.bookmarklet.oneliner.js" \
   "${ROOT_DIR}/ai-chat-export.unified.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/ai-chat-export.aistudio-grok.bookmarklet.oneliner.js" \
-  "${ROOT_DIR}/ai-chat-export.claude.bookmarklet.oneliner.js"
+  "${ROOT_DIR}/docs/ai-chat-export.bookmarklet.oneliner.js" \
+  "${ROOT_DIR}/docs/ai-chat-export.unified.bookmarklet.oneliner.js" \
+  "${ROOT_DIR}/docs/ai-chat-export.min.js" \
+  "${ROOT_DIR}/docs/ai-chat-export.github-pages.oneliner.js" \
+  "${ROOT_DIR}/docs/ai-chat-export.github-pages.fetch-loader.oneliner.js"

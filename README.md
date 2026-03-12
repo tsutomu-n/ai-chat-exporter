@@ -10,8 +10,6 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
   - Compact integrated build for Firefox
   - Simpler result dialog and shorter bookmark payload
 
-Specialized split variants are kept in `archive/README.ja.md` only.
-
 ## What It Does
 
 - walks long chats from top to bottom
@@ -34,8 +32,6 @@ Specialized split variants are kept in `archive/README.ja.md` only.
   - compact ASCII unified bookmarklet for Firefox
 - `src/ai-chat-export.js`
   - readable source
-- `archive/README.ja.md`
-  - archived split builds, experimental variants, and developer-only outputs
 
 ## Supported Sites
 
@@ -49,6 +45,12 @@ Specialized split variants are kept in `archive/README.ja.md` only.
 
 - `docs/README.ja.md`
 - `docs/codex-cli-frontend-setup.ja.md`
+
+## Public Repository Notes
+
+- Keep `.agents/skills/` in the repository. These are reusable repository instructions.
+- Keep `.ai_memory/` out of the repository. It is local Codex working memory and is ignored by `.gitignore`.
+- Keep generated coverage output out of the repository.
 
 ## Development
 
