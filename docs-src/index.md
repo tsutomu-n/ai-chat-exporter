@@ -18,4 +18,3 @@ Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、
 ## 詳細ドキュメント
 
 - [README.ja.md](./README.ja.md)
-- [codex-cli-frontend-setup.ja.md](./codex-cli-frontend-setup.ja.md)

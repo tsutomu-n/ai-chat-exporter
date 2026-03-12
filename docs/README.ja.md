@@ -17,4 +17,3 @@
 ## Docs
 
 - [README.ja.md](./README.ja.md)
-- [codex-cli-frontend-setup.ja.md](./codex-cli-frontend-setup.ja.md)

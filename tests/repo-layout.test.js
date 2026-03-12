@@ -93,7 +93,6 @@ describe("repository layout", () => {
     expect(readme).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
     expect(readme).toContain("Chrome");
     expect(readme).toContain("Firefox");
-    expect(readme).toContain("docs/codex-cli-frontend-setup.ja.md");
     expect(readme).not.toContain("docs/public-bookmarklet.ja.md");
     expect(readme).not.toContain("ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js");
     expect(readme).not.toContain("ai-chat-export.aistudio-grok.bookmarklet.oneliner.js");
@@ -103,6 +102,7 @@ describe("repository layout", () => {
     expect(readme).not.toContain("loaders/ai-chat-export.github-pages.oneliner.js");
     expect(readme).not.toContain("archive/README.ja.md");
     expect(readme).not.toContain("archive/");
+    expect(readme).not.toContain("docs/codex-cli-frontend-setup.ja.md");
 
     expect(readmeJa).toContain("## このツールの目的");
     expect(readmeJa).toContain("## 主な機能");
@@ -113,7 +113,6 @@ describe("repository layout", () => {
     expect(readmeJa).toContain("Chrome");
     expect(readmeJa).toContain("Firefox");
     expect(readmeJa).toContain("統合版");
-    expect(readmeJa).toContain("docs/codex-cli-frontend-setup.ja.md");
     expect(readmeJa).not.toContain("docs/public-bookmarklet.ja.md");
     expect(readmeJa).not.toContain("ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js");
     expect(readmeJa).not.toContain("ai-chat-export.aistudio-grok.bookmarklet.oneliner.js");
@@ -126,6 +125,7 @@ describe("repository layout", () => {
     expect(readmeJa).not.toContain("loaders/ai-chat-export.github-pages.oneliner.js");
     expect(readmeJa).not.toContain("archive/README.ja.md");
     expect(readmeJa).not.toContain("archive/");
+    expect(readmeJa).not.toContain("docs/codex-cli-frontend-setup.ja.md");
   });
 
   test("updates docs pages to recommend only the unified Chrome and Firefox bookmarklets", () => {
@@ -192,11 +192,15 @@ describe("repository layout", () => {
 
     expect(readme).toContain("Public Repository Notes");
     expect(readme).toContain(".ai_memory/");
-    expect(readme).toContain(".agents/skills/");
+    expect(readme).toContain("AGENTS.md");
+    expect(readme).toContain(".agents/");
+    expect(readme).not.toContain(".agents/skills/");
 
     expect(readmeJa).toContain("## 公開リポジトリ向けメモ");
     expect(readmeJa).toContain(".ai_memory/");
-    expect(readmeJa).toContain(".agents/skills/");
+    expect(readmeJa).toContain("AGENTS.md");
+    expect(readmeJa).toContain(".agents/");
+    expect(readmeJa).not.toContain(".agents/skills/");
   });
 
   test("ships a Firefox-safe ASCII unified bookmarklet variant", () => {

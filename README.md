@@ -44,11 +44,10 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 ## Docs
 
 - `docs/README.ja.md`
-- `docs/codex-cli-frontend-setup.ja.md`
 
 ## Public Repository Notes
 
-- Keep `.agents/skills/` in the repository. These are reusable repository instructions.
+- Keep `AGENTS.md` and `.agents/` as local-only Codex working files outside the public repository.
 - Keep `.ai_memory/` out of the repository. It is local Codex working memory and is ignored by `.gitignore`.
 - Keep generated coverage output out of the repository.
 

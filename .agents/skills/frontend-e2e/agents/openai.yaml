@@ -1,7 +1,0 @@
-interface:
-  display_name: "Frontend E2E"
-  short_description: "Playwright repro and regression coverage"
-  default_prompt: "Use $frontend-e2e to add the smallest Playwright test that reproduces this known frontend behavior and prevents regression."
-
-policy:
-  allow_implicit_invocation: true
