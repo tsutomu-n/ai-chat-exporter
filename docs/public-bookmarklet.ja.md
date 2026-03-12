@@ -2,13 +2,15 @@
 
 ## 最初に使うファイル
 
-- `./ai-chat-export.bookmarklet.oneliner.js`
+- `./ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
+- `./ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
+- `./ai-chat-export.claude.bookmarklet.oneliner.js`
 
-このファイルが現在の第一推奨です。ブックマーク編集欄に保存しやすい長さを優先し、通常利用で必要な機能だけを残しています。過去の高機能版や派生版は repository 側の `archive/README.ja.md` にまとめています。
+通常はこの分割版が第一推奨です。ブックマーク編集欄に保存しやすい長さを優先しています。統合版を 1 本で使いたい場合は、UTF-8 ベースの `./ai-chat-export.unified.bookmarklet.oneliner.js` を先に試してください。過去の高機能版や派生版は repository 側の `archive/README.ja.md` にまとめています。
 
 ## 使い方
 
-1. `ai-chat-export.bookmarklet.oneliner.js` を開く
+1. 対応サイトに合うファイルを開く
 2. 中身を全部コピーする
 3. ブラウザで新しいブックマークを作る
 4. URL 欄へ 1 行をそのまま貼る

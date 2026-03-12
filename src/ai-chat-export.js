@@ -1,7 +1,7 @@
 javascript:(async()=>{'use strict';
 /**
  * AIチャット書き出し（日本語UI）
- * - 対象: ChatGPT (chatgpt.com / chat.openai.com) / Google AI Studio (aistudio.google.com) / Grok (grok系 / x.com/i/grok) / フォールバック
+ * - 対象: ChatGPT (chatgpt.com / chat.openai.com) / Claude (claude.ai) / Google AI Studio (aistudio.google.com) / Grok (grok系 / x.com/i/grok) / フォールバック
  * - 形式: Markdown（デフォルト）/ プレーンテキスト / Obsidian向け / JSON
  * - 重要: サイトの表示や規約変更で壊れる可能性があります。壊れたら直す前提の個人ツールです。
  */
@@ -456,6 +456,7 @@ class BaseAdapter{
     return Utils.normalizeTitle(document.title || '会話');
   }
   getPreferredScrollContainerSelectors(){ return []; }
+  getQualityPolicy(){ return {penalizeWeakIdentity:true}; }
   extractMessages(){
     // 汎用フォールバックは fail-closed に寄せる。
     // “それっぽい”会話ログを作るより、未対応として止める方が安全。
@@ -676,9 +677,117 @@ class GrokAdapter extends BaseAdapter{
   }
 }
 
+class ClaudeAdapter extends BaseAdapter{
+  constructor(){ super(); this.id='claude'; this.label='Claude'; }
+  matches(){
+    const host = location.hostname.toLowerCase();
+    return host === 'claude.ai' || host.endsWith('.claude.ai');
+  }
+  getConversationKey(){
+    return `${location.origin}${location.pathname}${location.search||''}`;
+  }
+  getTitle(){
+    const h = document.querySelector('main h1, header h1, [data-testid="conversation-title"], [data-testid="chat-title"]');
+    const t = (h?.textContent||'').trim();
+    return Utils.normalizeTitle(t || document.title || '会話');
+  }
+  getPreferredScrollContainerSelectors(){
+    return ['[data-testid="chat-messages"]', 'main', 'div[role="main"]', 'body'];
+  }
+  getQualityPolicy(){
+    return {penalizeWeakIdentity:false};
+  }
+  extractMessages(){
+    const collectMessages = (elements, dedupe=false)=>{
+      const seen = dedupe ? new Set() : null;
+      const out = [];
+      for (const el of elements){
+        const role = this.inferRole(el);
+        const contentNode = el.querySelector?.('[data-testid="message-content"], .prose, .whitespace-pre-wrap') || el;
+        const content = MarkdownParser.extract(contentNode);
+        if (!content || content.length<=0) continue;
+        const sig = this.nodeSig(el);
+        if (seen){
+          if (seen.has(sig)) continue;
+          seen.add(sig);
+        }
+        out.push({role, content, sig});
+      }
+      return out;
+    };
+    const roleCoverage = (messages)=>{
+      let score = 0;
+      if (messages.some(m=>m.role==='User')) score++;
+      if (messages.some(m=>m.role==='Model')) score++;
+      return score;
+    };
+
+    const explicit = Array.from(document.querySelectorAll(
+      '[data-message-author-role], [data-testid="user-message"], [data-testid="human-message"], [data-testid="assistant-message"], [data-testid="claude-message"], [data-testid="model-message"], div.font-claude-response'
+    ));
+    const explicitMessages = collectMessages(explicit);
+    const explicitCoverage = roleCoverage(explicitMessages);
+    if (explicitMessages.length && explicitCoverage>=2) return explicitMessages;
+
+    const fallback = Array.from(document.querySelectorAll(
+      'main [data-message-id], main [data-testid*="message"], main article, main section'
+    ));
+    const fallbackMessages = collectMessages(fallback, true);
+    if (!explicitMessages.length) return fallbackMessages;
+    if (!fallbackMessages.length) return explicitMessages;
+
+    const fallbackCoverage = roleCoverage(fallbackMessages);
+    if (fallbackCoverage > explicitCoverage) return fallbackMessages;
+    if (fallbackCoverage === explicitCoverage && fallbackMessages.length > explicitMessages.length) return fallbackMessages;
+    return explicitMessages;
+  }
+  inferRole(el){
+    const author = (el.getAttribute?.('data-message-author-role') || '').toLowerCase();
+    if (author === 'user' || author === 'human') return 'User';
+    if (author === 'assistant' || author === 'claude' || author === 'model') return 'Model';
+
+    const testId = (el.getAttribute?.('data-testid') || '').toLowerCase();
+    if (testId.includes('user') || testId.includes('human')) return 'User';
+    if (testId.includes('assistant') || testId.includes('claude') || testId.includes('model')) return 'Model';
+
+    const className = String(el.className || '').toLowerCase();
+    if (className.includes('font-user-message')) return 'User';
+    if (className.includes('font-claude-response')) return 'Model';
+
+    return 'Unknown';
+  }
+  nodeSig(el){
+    const stableId = el.getAttribute('data-message-id') || el.id || '';
+    if (stableId) return `id:${stableId}`;
+    const testId = el.getAttribute('data-testid') || '';
+    if (testId) return `testid:${testId}:${Utils.djb2((el.innerText||'').replace(/\s+/g,' ').trim().slice(0,300))}`;
+    const path = Utils.domPath(el);
+    if (path) return `p:${path}`;
+    const txt = (el.innerText||'').replace(/\s+/g,' ').trim().slice(0,500);
+    return `h:${Utils.djb2(txt)}`;
+  }
+  findExpandButtons(root){
+    const candidates = Array.from(root.querySelectorAll('button, a[role="button"]'));
+    return candidates.filter(b=>{
+      const text = (b.textContent||'').trim();
+      if (!text) return false;
+      if (!Utils.isVisible(b)) return false;
+      const ok = /(続きを読む|もっと見る|続き|全文|展開|表示を増やす|Show more|Read more|Expand|Expand all)/i.test(text);
+      if (!ok) return false;
+      const bad = /(削除|Delete|Remove|ログアウト|Log out|共有|Share|設定|Setting|停止|Stop|再生成|Regenerate|Retry|再試行|やり直し|New chat|新しいチャット)/i.test(text);
+      if (bad) return false;
+      if (b.tagName.toLowerCase()==='a'){
+        const href = b.getAttribute('href')||'';
+        if (href && !href.startsWith('#')) return false;
+      }
+      return true;
+    });
+  }
+}
+
 class AdapterFactory{
   static getAdapter(){
-    const adapters = [new ChatGPTAdapter(), new AIStudioAdapter(), new GrokAdapter(), new BaseAdapter()];
+    const adapters = [new ChatGPTAdapter(), new ClaudeAdapter(), new AIStudioAdapter(), new GrokAdapter(), new BaseAdapter()];
     return adapters.find(a=>a.matches()) || new BaseAdapter();
   }
 }
@@ -793,14 +902,15 @@ class ScrollEngine{
     return candidates[0]?.el || rootScroller;
   }
 
-  static buildQuality(stats){
+  static buildQuality(stats, policy={}){
+    const penalizeWeakIdentity = policy.penalizeWeakIdentity !== false;
     const topStableEffectiveHits = Math.max(stats.topStableHits || 0, stats.topSettleStableHits || 0);
     const topConverged = (stats.topReached && topStableEffectiveHits>=stats.stableTarget) || stats.topEarlyExit;
     const bottomConverged = (stats.bottomReached && stats.bottomStableHits>=stats.stableTarget) || stats.bottomEarlyExit;
     const finalStable = stats.isFastPreset
       ? stats.finalNewMessages===0
       : (stats.finalStableHits>=2 && stats.finalNewMessages===0);
-    const identityStable = stats.weakIdentityMessages===0;
+    const identityStable = penalizeWeakIdentity ? stats.weakIdentityMessages===0 : true;
     const checks=[topConverged, bottomConverged, finalStable, identityStable];
     const failed=checks.filter(v=>!v).length;
     const status = failed===0?'PASS':(failed===1?'WARN':'FAIL');
@@ -1196,7 +1306,7 @@ class ScrollEngine{
     stats.unknownMessages = orderedRecords.filter(m => m.role === 'Unknown').length;
     stats.weakIdentityMessages = orderedRecords.filter(m => !!m.weakIdentity).length;
     const messages = orderedRecords.map(({firstSeenCapture, firstSeenDomIndex, lastSeenCapture, lastSeenDomIndex, weakIdentity, ...m})=>m);
-    const quality = this.buildQuality(stats);
+    const quality = this.buildQuality(stats, adapter.getQualityPolicy?.() || {});
     return {messages, quality, containerIsRoot:isRoot};
   }
 }
@@ -1822,7 +1932,7 @@ class App{
     else if (q.status==='WARN') hint = '会話が長い場合は、もう一度実行すると安定することがあります。';
     else hint = '取得漏れの可能性が高いです。もう一度実行を推奨します。';
 
-    if ((q.weakIdentityMessages||0) > 0){
+    if ((q.weakIdentityMessages||0) > 0 && !q.identityStable){
       hint = '一部メッセージの識別が弱く、重複や順序の精度が落ちる可能性があります。';
     } else if ((q.unknownMessages||0) > 0){
       hint = '一部メッセージの話者判定が不明です。DOM変更の影響を受けている可能性があります。';
@@ -2110,7 +2220,7 @@ class App{
     if ((quality.unknownMessages || 0) > 0){
       lines.push(`注意: 話者を判定できない会話が ${quality.unknownMessages}件 あります。`);
     }
-    if ((quality.weakIdentityMessages || 0) > 0){
+    if ((quality.weakIdentityMessages || 0) > 0 && !quality.identityStable){
       lines.push(`注意: 重複判定が弱い会話が ${quality.weakIdentityMessages}件 あります。`);
     }
     if ((quality.orderGraphCycles || 0) > 0){

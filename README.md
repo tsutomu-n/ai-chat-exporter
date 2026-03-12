@@ -2,12 +2,23 @@
 
 Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and Google AI Studio.
 
-## Start Here
+## Recommended Files
+
+- `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
+  - Recommended for ChatGPT and Claude
+- `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
+  - Recommended for Google AI Studio and Grok
+- `ai-chat-export.claude.bookmarklet.oneliner.js`
+  - Smallest Claude-only build
+
+Integrated builds are also available:
 
 - `ai-chat-export.bookmarklet.oneliner.js`
-  - The only primary distribution file
-  - Short enough for real browser bookmark editors
-  - Self-contained, so it does not rely on external `fetch` or `script src`
+- `ai-chat-export.unified.bookmarklet.oneliner.js`
+  - UTF-8 unified build
+  - more bookmark-editor-friendly on Firefox
+
+`ai-chat-export.bookmarklet.oneliner.js` can still be too long for some bookmark editors. If you want one integrated file, try `ai-chat-export.unified.bookmarklet.oneliner.js` first. In practice, the split variants are still the safest.
 
 ## What It Does
 
@@ -19,14 +30,23 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 
 ## Quick Start
 
-1. Open `ai-chat-export.bookmarklet.oneliner.js`
+1. Open `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js` or `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
 2. Copy the entire line into a browser bookmark URL field
 3. Run it on a supported chat page
 
 ## Repository Layout
 
 - `ai-chat-export.bookmarklet.oneliner.js`
-  - active bookmarklet
+  - ASCII unified bookmarklet
+- `ai-chat-export.unified.bookmarklet.oneliner.js`
+  - UTF-8 unified bookmarklet
+  - Firefox-friendlier integrated build
+- `ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js`
+  - recommended for ChatGPT and Claude
+- `ai-chat-export.aistudio-grok.bookmarklet.oneliner.js`
+  - recommended for Google AI Studio and Grok
+- `ai-chat-export.claude.bookmarklet.oneliner.js`
+  - Claude-only shortest build
 - `src/ai-chat-export.js`
   - readable source
 - `archive/README.ja.md`
@@ -35,9 +55,10 @@ Bookmarklet-based exporter for long AI chat sessions such as ChatGPT, Grok, and 
 ## Supported Sites
 
 - `chatgpt.com` / `chat.openai.com`
+- `claude.ai`
 - Grok domains and `x.com/i/grok`
 - `aistudio.google.com`
-- Some `claude`, `gemini`, and `deepseek` domains
+- Some `gemini` and `deepseek` domains
 
 ## Docs
 
