@@ -2,7 +2,6 @@
 .ai_memory/
 AGENTS.md
 .agents/
-docs-src/codex-cli-frontend-setup.ja.md
 docs/codex-cli-frontend-setup.ja.md
 
 # Dependencies

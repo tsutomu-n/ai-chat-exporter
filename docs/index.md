@@ -15,6 +15,21 @@ Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、
 2. 中身を全部コピーして、ブラウザのブックマーク URL 欄へ貼る
 3. 対応サイトの会話ページで実行する
 
-## 詳細ドキュメント
+## この `docs/` にあるもの
 
-- [README.ja.md](./README.ja.md)
+- `ai-chat-export.chrome.bookmarklet.oneliner.js`
+- `ai-chat-export.firefox.bookmarklet.oneliner.js`
+- `index.md`
+
+この `docs/` には、公開用のブックマークレット本体と最小ガイドだけを置いています。
+
+## ソースと配布物の関係
+
+- `src/ai-chat-export.js`
+  - 生成元の可読ソース
+- `ai-chat-export.chrome.bookmarklet.oneliner.js`
+  - Chrome / Chromium 向けの配布用 bookmarklet
+- `ai-chat-export.firefox.bookmarklet.oneliner.js`
+  - Firefox 向けの配布用 bookmarklet
+
+配布用ファイルは `scripts/generate_oneline_bookmarklet.sh` で再生成します。

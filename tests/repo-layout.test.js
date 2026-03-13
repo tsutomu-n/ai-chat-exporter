@@ -16,7 +16,7 @@ function readRepoFile(...parts) {
 describe("repository layout", () => {
   test("keeps only the primary bookmarklet in the active root/docs paths", () => {
     expect(existsSync(rootPath("README.md"))).toBe(true);
-    expect(existsSync(rootPath("README.ja.md"))).toBe(true);
+    expect(existsSync(rootPath("README.ja.md"))).toBe(false);
     expect(existsSync(rootPath("LICENSE"))).toBe(true);
     expect(existsSync(rootPath("ai-chat-export.chrome.bookmarklet.oneliner.js"))).toBe(true);
     expect(existsSync(rootPath("ai-chat-export.firefox.bookmarklet.oneliner.js"))).toBe(true);
@@ -36,8 +36,9 @@ describe("repository layout", () => {
     expect(existsSync(rootPath("src", "ai-chat-export.js"))).toBe(true);
     expect(existsSync(rootPath("scripts", "generate_oneline_bookmarklet.sh"))).toBe(true);
     expect(existsSync(rootPath("scripts", "sync_docs_assets.sh"))).toBe(true);
-    expect(existsSync(rootPath("scripts", "sync_site_docs.sh"))).toBe(true);
-    expect(existsSync(rootPath("docs-src"))).toBe(true);
+    expect(existsSync(rootPath("scripts", "sync_site_docs.sh"))).toBe(false);
+    expect(existsSync(rootPath("docs-src"))).toBe(false);
+    expect(existsSync(rootPath("docs", "README.ja.md"))).toBe(false);
     expect(existsSync(rootPath("archive"))).toBe(false);
 
     expect(existsSync(rootPath("ai-chat-export.public.oneliner.js"))).toBe(false);
@@ -77,15 +78,10 @@ describe("repository layout", () => {
     expect(syncAssets).not.toContain("claude.bookmarklet");
     expect((syncAssets.match(/\bcp\b/g) || []).length).toBe(2);
 
-    const syncDocs = readRepoFile("scripts", "sync_site_docs.sh");
-    expect(syncDocs).toContain("find");
-    expect(syncDocs).toContain("-name '*.md'");
-    expect(syncDocs).toContain("-delete");
   });
 
   test("updates the readmes to present only the public bookmarklets", () => {
     const readme = readRepoFile("README.md");
-    const readmeJa = readRepoFile("README.ja.md");
 
     expect(readme).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
     expect(readme).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
@@ -103,58 +99,39 @@ describe("repository layout", () => {
     expect(readme).not.toContain("archive/README.ja.md");
     expect(readme).not.toContain("archive/");
     expect(readme).not.toContain("docs/codex-cli-frontend-setup.ja.md");
-
-    expect(readmeJa).toContain("## このツールの目的");
-    expect(readmeJa).toContain("## 主な機能");
-    expect(readmeJa).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
-    expect(readmeJa).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
-    expect(readmeJa).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
-    expect(readmeJa).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
-    expect(readmeJa).toContain("Chrome");
-    expect(readmeJa).toContain("Firefox");
-    expect(readmeJa).toContain("統合版");
-    expect(readmeJa).not.toContain("docs/public-bookmarklet.ja.md");
-    expect(readmeJa).not.toContain("ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js");
-    expect(readmeJa).not.toContain("ai-chat-export.aistudio-grok.bookmarklet.oneliner.js");
-    expect(readmeJa).not.toContain("ai-chat-export.claude.bookmarklet.oneliner.js");
-    expect(readmeJa).toContain("長い AI チャット");
-    expect(readmeJa).toContain("品質判定");
-    expect(readmeJa).toContain("クリップボード");
-    expect(readmeJa).not.toContain("ai-chat-export.public.oneliner.js");
-    expect(readmeJa).not.toContain("variants/ai-chat-export.public.no-obs.oneliner.js");
-    expect(readmeJa).not.toContain("loaders/ai-chat-export.github-pages.oneliner.js");
-    expect(readmeJa).not.toContain("archive/README.ja.md");
-    expect(readmeJa).not.toContain("archive/");
-    expect(readmeJa).not.toContain("docs/codex-cli-frontend-setup.ja.md");
+    expect(readme).toContain("docs/index.md");
     expect(readme).toContain("Apache License 2.0");
     expect(readme).not.toContain("\nMIT\n");
-    expect(readmeJa).toContain("Apache License 2.0");
-    expect(readmeJa).not.toContain("\nMIT\n");
+    expect(readme).toContain("## このツールの目的");
+    expect(readme).toContain("## 主な機能");
+    expect(readme).toContain("長い AI チャット");
+    expect(readme).toContain("品質判定");
+    expect(readme).toContain("クリップボード");
   });
 
-  test("updates docs pages to recommend only the unified Chrome and Firefox bookmarklets", () => {
-    const pages = [
-      readRepoFile("docs-src", "README.ja.md"),
-      readRepoFile("docs-src", "index.md"),
-    ];
+  test("keeps docs/index.md as the only public markdown guide under docs", () => {
+    const page = readRepoFile("docs", "index.md");
 
-    for (const page of pages) {
-      expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
-      expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
-      expect(page).not.toContain("bookmarklet.oneliner`");
-      expect(page).not.toContain("unified.bookmarklet.oneliner`");
-      expect(page).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
-      expect(page).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
-      expect(page).toContain("Chrome");
-      expect(page).toContain("Firefox");
-      expect(page).not.toContain("ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js");
-      expect(page).not.toContain("ai-chat-export.aistudio-grok.bookmarklet.oneliner.js");
-      expect(page).not.toContain("ai-chat-export.claude.bookmarklet.oneliner.js");
-      expect(page).not.toContain("./ai-chat-export.public.oneliner.js");
-      expect(page).not.toContain("./ai-chat-export.public.min.js");
-      expect(page).not.toContain("archive/README.ja.md");
-      expect(page).not.toContain("archive/");
-    }
+    expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+    expect(page).toContain("src/ai-chat-export.js");
+    expect(page).toContain("scripts/generate_oneline_bookmarklet.sh");
+    expect(page).toContain("生成元");
+    expect(page).toContain("配布用");
+    expect(page).not.toContain("bookmarklet.oneliner`");
+    expect(page).not.toContain("unified.bookmarklet.oneliner`");
+    expect(page).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
+    expect(page).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
+    expect(page).toContain("Chrome");
+    expect(page).toContain("Firefox");
+    expect(page).not.toContain("ai-chat-export.chatgpt-claude.bookmarklet.oneliner.js");
+    expect(page).not.toContain("ai-chat-export.aistudio-grok.bookmarklet.oneliner.js");
+    expect(page).not.toContain("ai-chat-export.claude.bookmarklet.oneliner.js");
+    expect(page).not.toContain("./ai-chat-export.public.oneliner.js");
+    expect(page).not.toContain("./ai-chat-export.public.min.js");
+    expect(page).not.toContain("archive/README.ja.md");
+    expect(page).not.toContain("archive/");
+    expect(page).not.toContain("README.ja.md");
   });
 
   test("keeps the docs bookmarklet asset synced with the root bookmarklet", () => {
@@ -194,19 +171,9 @@ describe("repository layout", () => {
 
   test("documents the public repository boundary for local-only files", () => {
     const readme = readRepoFile("README.md");
-    const readmeJa = readRepoFile("README.ja.md");
 
-    expect(readme).toContain("Public Repository Notes");
-    expect(readme).toContain("Local-only files");
-    expect(readme).toContain(".ai_memory/");
-    expect(readme).toContain("AGENTS.md");
-    expect(readme).toContain(".agents/");
-
-    expect(readmeJa).toContain("## 公開リポジトリ向けメモ");
-    expect(readmeJa).toContain("ローカル専用ファイル");
-    expect(readmeJa).toContain(".ai_memory/");
-    expect(readmeJa).toContain("AGENTS.md");
-    expect(readmeJa).toContain(".agents/");
+    expect(readme).not.toContain("README.ja.md");
+    expect(readme).not.toContain("docs/README.ja.md");
   });
 
   test("ships a Firefox-safe ASCII unified bookmarklet variant", () => {
@@ -234,13 +201,13 @@ describe("repository layout", () => {
   });
 
   test("points the japanese readme at the simplified public asset layout", () => {
-    const readmeJa = readRepoFile("README.ja.md");
+    const readme = readRepoFile("README.md");
 
-    expect(readmeJa).toContain("assets/01-bookmark-setup.png");
-    expect(readmeJa).toContain("assets/02-config-dialog.png");
-    expect(readmeJa).toContain("assets/03-export-result.png");
-    expect(readmeJa).not.toContain("assets/screenshots/");
-    expect(readmeJa).not.toContain("assets/README.ja.md");
+    expect(readme).toContain("assets/01-bookmark-setup.png");
+    expect(readme).toContain("assets/02-config-dialog.png");
+    expect(readme).toContain("assets/03-export-result.png");
+    expect(readme).not.toContain("assets/screenshots/");
+    expect(readme).not.toContain("assets/README.ja.md");
   });
 
   test("ships the repository under Apache License 2.0", () => {

@@ -23,8 +23,8 @@ describe("codex frontend workflow guidance", () => {
     expect(existsSync(rootPath("docs-src", "codex-cli-frontend-setup.ja.md"))).toBe(false);
     expect(existsSync(rootPath("docs", "codex-cli-frontend-setup.ja.md"))).toBe(false);
 
-    const readmeJa = readRepoFile("README.ja.md");
-    expect(readmeJa).not.toContain("docs/codex-cli-frontend-setup.ja.md");
+    const readme = readRepoFile("README.md");
+    expect(readme).not.toContain("docs/codex-cli-frontend-setup.ja.md");
   });
 
   test("does not publish repository-specific skill packs", () => {
