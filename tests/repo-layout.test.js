@@ -100,6 +100,7 @@ describe("repository layout", () => {
     expect(readme).not.toContain("archive/");
     expect(readme).not.toContain("docs/codex-cli-frontend-setup.ja.md");
     expect(readme).toContain("docs/index.md");
+    expect(readme).toContain("[docs/index.md](docs/index.md)");
     expect(readme).toContain("Apache License 2.0");
     expect(readme).not.toContain("\nMIT\n");
     expect(readme).toContain("## このツールの目的");
@@ -112,6 +113,7 @@ describe("repository layout", () => {
   test("keeps docs/index.md as the only public markdown guide under docs", () => {
     const page = readRepoFile("docs", "index.md");
 
+    expect(page).toContain("# AIチャット書き出し 使い方ガイド");
     expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
     expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
     expect(page).toContain("src/ai-chat-export.js");
@@ -132,6 +134,20 @@ describe("repository layout", () => {
     expect(page).not.toContain("archive/README.ja.md");
     expect(page).not.toContain("archive/");
     expect(page).not.toContain("README.ja.md");
+    expect(page).toContain("## 基本的な使い方");
+    expect(page).toContain("## 実行モードの違い");
+    expect(page).toContain("## 出力形式の違い");
+    expect(page).toContain("## 品質判定の見方");
+    expect(page).toContain("## 保存方法の違い");
+    expect(page).toContain("はやい");
+    expect(page).toContain("ふつう");
+    expect(page).toContain("ていねい");
+    expect(page).toContain("Markdown");
+    expect(page).toContain("プレーンテキスト");
+    expect(page).toContain("PASS");
+    expect(page).toContain("WARN");
+    expect(page).toContain("FAIL");
+    expect(page).toContain("クリップボード");
   });
 
   test("keeps the docs bookmarklet asset synced with the root bookmarklet", () => {
@@ -165,6 +181,7 @@ describe("repository layout", () => {
     expect(gitignore).toContain(".vscode/");
     expect(gitignore).toContain(".idea/");
     expect(gitignore).toContain("*.log");
+    expect(gitignore).not.toContain("docs/codex-cli-frontend-setup.ja.md");
 
     expect(existsSync(rootPath(".ai_memory"))).toBe(false);
   });
