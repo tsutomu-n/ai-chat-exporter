@@ -126,6 +126,10 @@ describe("repository layout", () => {
     expect(readmeJa).not.toContain("archive/README.ja.md");
     expect(readmeJa).not.toContain("archive/");
     expect(readmeJa).not.toContain("docs/codex-cli-frontend-setup.ja.md");
+    expect(readme).toContain("Apache License 2.0");
+    expect(readme).not.toContain("\nMIT\n");
+    expect(readmeJa).toContain("Apache License 2.0");
+    expect(readmeJa).not.toContain("\nMIT\n");
   });
 
   test("updates docs pages to recommend only the unified Chrome and Firefox bookmarklets", () => {
@@ -237,5 +241,14 @@ describe("repository layout", () => {
     expect(readmeJa).toContain("assets/03-export-result.png");
     expect(readmeJa).not.toContain("assets/screenshots/");
     expect(readmeJa).not.toContain("assets/README.ja.md");
+  });
+
+  test("ships the repository under Apache License 2.0", () => {
+    const license = readRepoFile("LICENSE");
+
+    expect(license).toContain("Apache License");
+    expect(license).toContain("Version 2.0, January 2004");
+    expect(license).toContain("http://www.apache.org/licenses/");
+    expect(license).not.toContain("MIT License");
   });
 });

@@ -131,4 +131,4 @@ bash scripts/sync_site_docs.sh
 
 ## ライセンス
 
-MIT
+Apache License 2.0
