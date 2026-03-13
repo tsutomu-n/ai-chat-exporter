@@ -218,4 +218,24 @@ describe("repository layout", () => {
     expect(/[^\x00-\x7F]/.test(unified)).toBe(false);
     expect(unified).toContain(".filter(Boolean)");
   });
+
+  test("keeps only the curated README screenshots under stable names", () => {
+    expect(existsSync(rootPath("assets", "01-bookmark-setup.png"))).toBe(true);
+    expect(existsSync(rootPath("assets", "02-config-dialog.png"))).toBe(true);
+    expect(existsSync(rootPath("assets", "03-export-result.png"))).toBe(true);
+
+    expect(existsSync(rootPath("assets", "README.ja.md"))).toBe(false);
+    expect(existsSync(rootPath("assets", "screenshots", "README.md"))).toBe(false);
+    expect(existsSync(rootPath("assets", "screenshots"))).toBe(false);
+  });
+
+  test("points the japanese readme at the simplified public asset layout", () => {
+    const readmeJa = readRepoFile("README.ja.md");
+
+    expect(readmeJa).toContain("assets/01-bookmark-setup.png");
+    expect(readmeJa).toContain("assets/02-config-dialog.png");
+    expect(readmeJa).toContain("assets/03-export-result.png");
+    expect(readmeJa).not.toContain("assets/screenshots/");
+    expect(readmeJa).not.toContain("assets/README.ja.md");
+  });
 });
