@@ -203,7 +203,7 @@ minimal = replaceRegex(
         const cb = Utils.el('input',{type:'checkbox',style:'margin-top:3px;'});
         cb.checked = !!this.config.txtHeader;
         cb.addEventListener('change', ()=>{ this.config.txtHeader=cb.checked; this.saveConfig(); });
-        txt.append(cb, Utils.el('span',{text:ja?'会話ヘッダーを付ける':zh?'包含对话头部信息':'Include conversation header'}));
+        txt.append(cb, Utils.el('span',{text:ja?'会話ヘッダーを付ける':zh?'含对话头部':'Include header'}));
         body.appendChild(txt);
       }
       const footer = Utils.el('div',{style:\`padding:14px 16px;background:\${THEME.bg};border-top:1px solid \${THEME.border};display:flex;gap:10px;justify-content:flex-end;\`});
@@ -224,7 +224,7 @@ minimal = replaceRegex(
     const modal = Utils.el('div',{style:\`width:min(420px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
     const body = Utils.el('div',{style:'padding:16px;display:grid;gap:8px;'});
     const title = Utils.el('div',{text:ja?'処理中':zh?'处理中':'Working',style:'font-size:18px;line-height:1.35;font-weight:700;'});
-    const info = Utils.el('div',{text:ja?'会話を集めています…':zh?'正在收集消息…':'Collecting messages…',style:\`font-size:13px;line-height:1.6;color:\${THEME.muted};font-weight:500;\`});
+    const info = Utils.el('div',{text:ja?'会話を集めています…':zh?'正在收集消息…':'Collecting…',style:\`font-size:13px;line-height:1.6;color:\${THEME.muted};font-weight:500;\`});
     body.append(title, info);
     const footer = Utils.el('div',{style:\`padding:12px 16px;background:\${THEME.bg};border-top:1px solid \${THEME.border};display:flex;justify-content:flex-end;\`});
     footer.append(this.btn(ja?'中断':zh?'中止':'Abort','danger', ()=>{ this.abortState.aborted=true; Utils.toast(ja?'中断しました。':zh?'已中止。':'Aborted.','warn'); }));
@@ -275,17 +275,20 @@ unifiedFirefox = replaceRegex(
     const q = quality || {status:'WARN', score:0};
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-    const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Looks good') : q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
+    const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Good') : q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
     const color = q.status==='PASS' ? THEME.ok : q.status==='WARN' ? THEME.warn : THEME.bad;
-    const hint = q.status==='PASS' ? (ja ? '保存してよさそうです。' : zh ? '看起来可以保存。' : 'This looks ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行してください。' : zh ? '如有需要，请重新运行一次。' : 'Rerun if you need a cleaner result.') : (ja ? '再実行推奨です。' : zh ? '建议重新运行。' : 'Rerunning is recommended.');
+    const hint = q.status==='PASS' ? (ja ? '保存してよさそうです。' : zh ? '看起来可以保存。' : 'Ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行してください。' : zh ? '如有需要，请重新运行一次。' : 'Rerun if needed.') : (ja ? '再実行推奨です。' : zh ? '建议重新运行。' : 'Rerun recommended.');
     let diffLine = '';
     if (diff?.previous){
-      const sign = diff.diff>0 ? '+' : '';
+      const prev = diff.previous.count;
+      const now = diff.now.count;
+      const delta = diff.diff || 0;
+      const sign = delta>0 ? '+' : '';
       diffLine = ja
-        ? \`\${diff.previousLabel || '前回'}: \${diff.previous.count}件 / 今回: \${diff.now.count}件（差分 \${sign}\${diff.diff}件）\`
+        ? \`\${diff.previousLabel || '前回'}: \${prev}件 / 今回: \${now}件（差分 \${sign}\${delta}件）\`
         : zh
-        ? \`\${diff.previousLabel || '上一次'}: \${diff.previous.count}条 / 本次: \${diff.now.count}条（差值 \${sign}\${diff.diff}条）\`
-        : \`\${diff.previousLabel || 'Previous'}: \${diff.previous.count} / Now: \${diff.now.count} (delta \${sign}\${diff.diff})\`;
+        ? \`\${diff.previousLabel || '上一次'}: \${prev}条 / 本次: \${now}条（差值 \${sign}\${delta}条）\`
+        : \`\${diff.previousLabel || 'Previous'}: \${prev} / Now: \${now} (delta \${sign}\${delta})\`;
     }
     return {label, color, hint, diffLine, score:q.score, raw:q};
   }
@@ -333,8 +336,9 @@ unifiedFirefox = replaceRegex(
   compactSummaryLines(messages, quality, diff, savedState='未保存'){
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
+    const delta = diff?.diff || 0;
     const diffLine = diff?.previous
-      ? (ja ? \`前回比: \${diff.diff>0?'+':''}\${diff.diff}件\` : zh ? \`与上次相比: \${diff.diff>0?'+':''}\${diff.diff}条\` : \`Delta: \${diff.diff>0?'+':''}\${diff.diff}\`)
+      ? (ja ? \`前回比: \${delta>0?'+':''}\${delta}件\` : zh ? \`与上次相比: \${delta>0?'+':''}\${delta}条\` : \`Delta: \${delta>0?'+':''}\${delta}\`)
       : (ja ? '前回比: なし' : zh ? '与上次相比: 无' : 'Delta: none');
     return ja
       ? [\`抽出件数: \${messages.length}件\`, \`保存状態: \${savedState}\`, diffLine]
@@ -355,12 +359,13 @@ unifiedFirefox = replaceRegex(
   comparisonBaseLabel(diff){
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-    if (Number.isFinite(diff?.previous?.count)){
+    const count = diff?.previous?.count;
+    if (Number.isFinite(count)){
       if (diff?.comparisonKind === 'snapshot'){
         const label = diff.previousLabel || (ja ? '前回結果' : zh ? '上一次结果' : 'Previous result');
-        return ja ? \`比較ベース: \${label}（\${diff.previous.count}件）\` : zh ? \`比较基准: \${label}（\${diff.previous.count}条）\` : \`Comparison base: \${label} (\${diff.previous.count})\`;
+        return ja ? \`比較ベース: \${label}（\${count}件）\` : zh ? \`比较基准: \${label}（\${count}条）\` : \`Comparison base: \${label} (\${count})\`;
       }
-      return ja ? \`比較ベース: \${diff.previous.count}件\` : zh ? \`比较基准: \${diff.previous.count}条\` : \`Comparison base: \${diff.previous.count}\`;
+      return ja ? \`比較ベース: \${count}件\` : zh ? \`比较基准: \${count}条\` : \`Comparison base: \${count}\`;
     }
     return ja ? '比較ベース: なし' : zh ? '比较基准: 无' : 'Comparison base: none';
   }

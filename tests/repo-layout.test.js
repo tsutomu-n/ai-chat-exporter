@@ -272,9 +272,10 @@ describe("repository layout", () => {
     expect(generator).toContain("comparisonBaseLabel(diff){");
     expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
     expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
-    expect(generator).toContain("\\`比較ベース: \\${label}（\\${diff.previous.count}件）\\`");
-    expect(generator).toContain("\\`Comparison base: \\${label} (\\${diff.previous.count})\\`");
-    expect(generator).toContain("\\`比较基准: \\${label}（\\${diff.previous.count}条）\\`");
+    expect(generator).toContain("const count = diff?.previous?.count;");
+    expect(generator).toContain("\\`比較ベース: \\${label}（\\${count}件）\\`");
+    expect(generator).toContain("\\`Comparison base: \\${label} (\\${count})\\`");
+    expect(generator).toContain("\\`比较基准: \\${label}（\\${count}条）\\`");
   });
 
   test("keeps only the curated README screenshots under stable names", () => {
