@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = path.join(repoRoot, "src", "ai-chat-export.js");
 
-function loadApp({ storedConfig } = {}) {
+function loadApp({ storedConfig, navigatorLanguage = "ja-JP" } = {}) {
   const store = new Map();
   const source = readFileSync(sourcePath, "utf8")
     .replace(/^javascript:/, "")
@@ -20,6 +20,13 @@ function loadApp({ storedConfig } = {}) {
   }
 
   globalThis.window = globalThis;
+  globalThis.navigator = {
+    language: navigatorLanguage,
+    languages: [navigatorLanguage],
+    clipboard: {
+      async writeText() {},
+    },
+  };
   globalThis.location = {
     hostname: "example.com",
     origin: "https://example.com",
@@ -329,6 +336,87 @@ describe("ai-chat export formats", () => {
     expect(app.config.txtHeader).toBe(false);
   });
 
+  test("detects english as the initial language when the browser locale is not japanese", () => {
+    const { app } = loadApp({ navigatorLanguage: "en-US" });
+
+    expect(app.config.lang).toBe("en");
+    expect(app.getFormatLabel()).toBe("Markdown");
+    expect(app.roleLabel("User")).toBe("You");
+  });
+
+  test("uses the selected app language for the fallback conversation title", () => {
+    const { app } = loadApp({
+      navigatorLanguage: "ja-JP",
+      storedConfig: {
+        lang: "en",
+        fmt: "std",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: true,
+      },
+    });
+
+    globalThis.document.title = "";
+
+    const { output } = app.formatOutput(
+      [{ role: "User", content: "prompt" }],
+      { status: "PASS", score: 100 },
+      { previous: null, lastAttempt: null },
+    );
+
+    expect(output).toContain("# Conversation");
+    expect(output).not.toContain("# 会話");
+  });
+
+  test("uses the selected app language for markdown parser fallback labels", () => {
+    const { app } = loadApp({
+      navigatorLanguage: "ja-JP",
+      storedConfig: {
+        lang: "en",
+        fmt: "std",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: true,
+      },
+    });
+    const document = setupUiDom();
+    app.saveConfig();
+
+    const img = document.createElement("img");
+    const anchor = document.createElement("a");
+
+    expect(globalThis.__AI_CHAT_EXPORT_TEST__.MarkdownParser.extract(img)).toBe("![Image](Image)");
+    expect(globalThis.__AI_CHAT_EXPORT_TEST__.MarkdownParser.extract(anchor)).toBe("Link");
+  });
+
+  test("prefers the stored language over browser auto detection", () => {
+    const { app } = loadApp({
+      navigatorLanguage: "en-US",
+      storedConfig: {
+        lang: "ja",
+        fmt: "std",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: true,
+      },
+    });
+
+    expect(app.config.lang).toBe("ja");
+    expect(app.roleLabel("User")).toBe("あなた");
+  });
+
   test("shows plain text in the config dialog and switches to txt when clicked", async () => {
     const { app } = loadApp();
     setupUiDom();
@@ -354,6 +442,55 @@ describe("ai-chat export formats", () => {
       .find((button) => button.textContent === "開始");
 
     expect(startButton).toBeDefined();
+    startButton.click();
+
+    await expect(pending).resolves.toBe(true);
+  });
+
+  test("shows english labels in the config dialog and persists the selected language", async () => {
+    const { app, store } = loadApp({ navigatorLanguage: "en-US" });
+    setupUiDom();
+
+    const pending = app.showConfigDialog();
+    const buttons = globalThis.document.body.querySelectorAll("button");
+
+    expect(globalThis.document.body.textContent).toContain("Export AI chat");
+    expect(globalThis.document.body.textContent).toContain("Language");
+    expect(globalThis.document.body.textContent).toContain("Mode");
+    expect(globalThis.document.body.textContent).toContain("Save format");
+    expect(globalThis.document.body.textContent).toContain("Advanced settings");
+    expect(globalThis.document.body.textContent).not.toContain("Speed preset");
+
+    const japaneseButton = buttons.find((button) => button.textContent.includes("日本語"));
+    expect(japaneseButton).toBeDefined();
+    japaneseButton.click();
+
+    expect(app.config.lang).toBe("ja");
+    expect(JSON.parse(store.get("ai-chat-export:v2_cfg_generic")).lang).toBe("ja");
+    expect(globalThis.document.body.textContent).toContain("AIチャットを書き出す");
+
+    const startButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "開始");
+    startButton.click();
+
+    await expect(pending).resolves.toBe(true);
+  });
+
+  test("shows localized language descriptions in japanese mode", async () => {
+    const { app } = loadApp({ navigatorLanguage: "ja-JP" });
+    setupUiDom();
+
+    const pending = app.showConfigDialog();
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("日本語UIと出力ラベル");
+    expect(text).toContain("英語UIと出力ラベル");
+    expect(text).not.toContain("Japanese UI and output labels");
+
+    const startButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "開始");
     startButton.click();
 
     await expect(pending).resolves.toBe(true);
@@ -387,6 +524,41 @@ describe("ai-chat export formats", () => {
     const { app } = loadApp();
 
     expect(app.getFormatLabel()).toBe("Markdown");
+  });
+
+  test("renders english metadata labels in txt output when lang is en", () => {
+    const { app } = loadApp({
+      navigatorLanguage: "en-US",
+      storedConfig: {
+        lang: "en",
+        fmt: "txt",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: true,
+      },
+    });
+
+    const { output } = app.formatOutput(
+      [
+        {
+          role: "User",
+          content: "Simple body",
+        },
+      ],
+      { status: "PASS", score: 100 },
+      { previous: null, lastAttempt: null },
+    );
+
+    expect(output).toContain("- Format: Plain text");
+    expect(output).toContain("- Site: Generic");
+    expect(output).toContain("- Messages: 1");
+    expect(output).toContain("You:\nSimple body");
+    expect(output).not.toContain("- 形式:");
+    expect(output).not.toContain("あなた:");
   });
 
   test("shows only one careful rerun action in the result dialog", async () => {
@@ -478,6 +650,45 @@ describe("ai-chat export formats", () => {
     ]);
   });
 
+  test("uses simpler english labels when switching between rerun results", async () => {
+    const { app } = loadApp({ navigatorLanguage: "en-US" });
+    const previous = app.createResultSnapshot(
+      [
+        { role: "User", content: "old prompt" },
+        { role: "Model", content: "old answer" },
+      ],
+      { status: "PASS", score: 100 },
+      { preset: "normal" },
+    );
+    const current = app.createResultSnapshot(
+      [
+        { role: "User", content: "new prompt" },
+        { role: "Model", content: "new answer" },
+      ],
+      { status: "WARN", score: 75 },
+      { preset: "careful" },
+    );
+
+    const calls = [];
+    app.showResultDialog = async (messages, quality, options = {}) => {
+      calls.push({ messages, quality, options });
+
+      if (calls.length === 1) {
+        expect(options.alternateTitle).toBe("Previous result kept");
+        expect(options.alternateButtonLabel).toBe("View previous result");
+        return { action: "show_alternate_result" };
+      }
+
+      expect(options.alternateTitle).toBe("Current result kept");
+      expect(options.alternateButtonLabel).toBe("View current result");
+      return { action: "cancel" };
+    };
+
+    await app.resolveResultDialogChoice(current, previous);
+
+    expect(calls).toHaveLength(2);
+  });
+
   test("uses the previous rerun snapshot as the comparison base in the result dialog", async () => {
     const { app } = loadApp();
     setupUiDom();
@@ -516,6 +727,40 @@ describe("ai-chat export formats", () => {
     const cancelButton = globalThis.document.body
       .querySelectorAll("button")
       .find((button) => button.textContent === "中止");
+
+    expect(cancelButton).toBeDefined();
+    cancelButton.click();
+
+    await expect(pending).resolves.toEqual({ action: "cancel" });
+  });
+
+  test("uses simpler english labels in the result dialog", async () => {
+    const { app } = loadApp({ navigatorLanguage: "en-US" });
+    setupUiDom();
+
+    const pending = app.showResultDialog(
+      [
+        { role: "User", content: "prompt" },
+        { role: "Model", content: "answer" },
+      ],
+      { status: "WARN", score: 75 },
+      { preset: "normal" },
+    );
+
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("Review before saving");
+    expect(text).toContain("Output file name");
+    expect(text).toContain("Manual copy");
+    expect(text).toContain("Copy from this area");
+    expect(text).toContain("Show quality details");
+    expect(text).not.toContain("Saved file name");
+    expect(text).not.toContain("Manual copy area (fallback)");
+    expect(text).not.toContain("Copy if possible");
+
+    const cancelButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "Cancel");
 
     expect(cancelButton).toBeDefined();
     cancelButton.click();

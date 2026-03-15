@@ -1,77 +1,81 @@
-# AIチャット書き出し 使い方ガイド
+# AI Chat Export Guide
 
-## 最初に使うべきファイル
+[Japanese guide](./index.ja.md) | [Chinese guide](./index.zh-CN.md)
+
+## Start with these files
 
 - `./ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - Chrome / Chromium 系で使う統合版
+  - One-file version for Chrome / Chromium
 - `./ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - Firefox で使う軽量統合版
+  - Smaller one-file version for Firefox
 
-Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.firefox.bookmarklet.oneliner.js` を使う前提に整理しています。公開リポジトリではこの 2 ファイルだけを配布対象にしています。
+This public repo mainly ships these two bookmarklet files.
 
-## 基本的な使い方
+## Basic usage
 
-1. ブラウザに応じて `ai-chat-export.chrome.bookmarklet.oneliner.js` または `ai-chat-export.firefox.bookmarklet.oneliner.js` を開く
-2. 中身を全部コピーして、ブラウザのブックマーク URL 欄へ貼る
-3. 対応サイトの会話ページでブックマークレットを実行する
-4. 設定ダイアログで実行モードと保存形式を選ぶ
-5. 品質判定を確認して、ファイル保存またはクリップボード保存を行う
+1. Open `ai-chat-export.chrome.bookmarklet.oneliner.js` for Chrome / Chromium or `ai-chat-export.firefox.bookmarklet.oneliner.js` for Firefox
+2. Copy the whole file content into a bookmark URL field
+3. Run the bookmarklet on a supported conversation page
+4. Choose the run mode and output format
+5. Review the quality status and save to file or clipboard
 
-## 実行モードの違い
+## Run modes
 
-- `はやい`
-  - 短い会話向けです。取り込みを早めに切り上げます。
-- `ふつう`
-  - 既定値です。普段使いではまずこれで十分です。
-- `ていねい`
-  - 長い会話向けです。スクロールや展開の追い込みを強めます。
+- `Fast`
+  - Best for short conversations. Stops earlier.
+- `Normal`
+  - Default. Best for everyday use.
+- `Careful`
+  - Best for long conversations. Scrolls more and opens more hidden content.
 
-会話が長い、途中で取りこぼしがありそう、品質判定が `WARN` や `FAIL` になった場合は `ていねい` を使うのが基本です。
+If a chat is long or the quality status shows `WARN` or `FAIL`, rerun with `Careful`.
 
-## 出力形式の違い
+## Output formats
 
 - `Markdown`
-  - 見出しや区切りを残した読みやすい形式です。あとで `.md` として読み返したいときに向いています。
-- `プレーンテキスト`
-  - Markdown 記法を極力落とした軽い形式です。本文だけを共有したいときに向いています。
+  - Readable format for normal `.md` files
+- `Plain text`
+  - Lightweight format with most Markdown syntax removed
 
-`プレーンテキスト` では、ヘッダ付きと本文のみの切り替えもできます。
+`Plain text` can be exported with or without the conversation header.
 
-## 品質判定の見方
+## Quality status
 
 - `PASS`
-  - 大きな問題は見えていません。そのまま保存してよい状態です。
+  - No clear problem was found.
 - `WARN`
-  - 取りこぼしや差分の大きさが疑われます。まず `ていねい` での再実行を検討します。
+  - Missing content or a large delta is possible. Try `Careful` first.
 - `FAIL`
-  - 保存前に再実行した方がよい状態です。長い会話や途中停止が疑われます。
+  - Rerunning before saving is recommended.
 
-品質判定は、抽出件数や前回との差分をもとに保存前の確認材料として使います。
+The quality status is based on extraction counts and comparison against previous saves.
 
-## 保存方法の違い
+## Save options
 
-- `保存（ファイル）`
-  - ローカルにそのまま保存します。あとで読み返す用途に向いています。
-- `クリップボード`
-  - すぐ貼り付けたいときに向いています。メモアプリやチャットへの転記が楽です。
+- `Save file`
+  - Saves directly to a local file
+- `Copy to clipboard`
+  - Best when you want to paste immediately
 
-ブラウザの制限でクリップボードに直接書き込めない場合は、手動コピー用の案内に切り替わります。
+If clipboard write is blocked by the browser, the tool shows a manual copy area.
 
-## この `docs/` にあるもの
+## What is under `docs/`
 
 - `ai-chat-export.chrome.bookmarklet.oneliner.js`
 - `ai-chat-export.firefox.bookmarklet.oneliner.js`
 - `index.md`
+- `index.ja.md`
+- `index.zh-CN.md`
 
-この `docs/` には、公開用のブックマークレット本体と使い方ガイドだけを置いています。
+This `docs/` directory ships only the public bookmarklets and the usage guides.
 
-## ソースと配布物の関係
+## Source and distribution
 
 - `src/ai-chat-export.js`
-  - 生成元の可読ソース
+  - Readable source
 - `ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - Chrome / Chromium 向けの配布用 bookmarklet
+  - Chrome / Chromium distribution bookmarklet
 - `ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - Firefox 向けの配布用 bookmarklet
+  - Firefox distribution bookmarklet
 
-配布用ファイルは `scripts/generate_oneline_bookmarklet.sh` で再生成します。
+The distribution files are regenerated with `scripts/generate_oneline_bookmarklet.sh`.

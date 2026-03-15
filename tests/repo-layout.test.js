@@ -16,7 +16,8 @@ function readRepoFile(...parts) {
 describe("repository layout", () => {
   test("keeps only the primary bookmarklet in the active root/docs paths", () => {
     expect(existsSync(rootPath("README.md"))).toBe(true);
-    expect(existsSync(rootPath("README.ja.md"))).toBe(false);
+    expect(existsSync(rootPath("README.ja.md"))).toBe(true);
+    expect(existsSync(rootPath("README.zh-CN.md"))).toBe(true);
     expect(existsSync(rootPath("LICENSE"))).toBe(true);
     expect(existsSync(rootPath("ai-chat-export.chrome.bookmarklet.oneliner.js"))).toBe(true);
     expect(existsSync(rootPath("ai-chat-export.firefox.bookmarklet.oneliner.js"))).toBe(true);
@@ -38,7 +39,8 @@ describe("repository layout", () => {
     expect(existsSync(rootPath("scripts", "sync_docs_assets.sh"))).toBe(true);
     expect(existsSync(rootPath("scripts", "sync_site_docs.sh"))).toBe(false);
     expect(existsSync(rootPath("docs-src"))).toBe(false);
-    expect(existsSync(rootPath("docs", "README.ja.md"))).toBe(false);
+    expect(existsSync(rootPath("docs", "index.ja.md"))).toBe(true);
+    expect(existsSync(rootPath("docs", "index.zh-CN.md"))).toBe(true);
     expect(existsSync(rootPath("archive"))).toBe(false);
 
     expect(existsSync(rootPath("ai-chat-export.public.oneliner.js"))).toBe(false);
@@ -82,6 +84,8 @@ describe("repository layout", () => {
 
   test("updates the readmes to present only the public bookmarklets", () => {
     const readme = readRepoFile("README.md");
+    const readmeJa = readRepoFile("README.ja.md");
+    const readmeZh = readRepoFile("README.zh-CN.md");
 
     expect(readme).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
     expect(readme).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
@@ -101,25 +105,43 @@ describe("repository layout", () => {
     expect(readme).not.toContain("docs/codex-cli-frontend-setup.ja.md");
     expect(readme).toContain("docs/index.md");
     expect(readme).toContain("[docs/index.md](docs/index.md)");
+    expect(readme).toContain("[Japanese README](README.ja.md)");
+    expect(readme).toContain("[Chinese README](README.zh-CN.md)");
     expect(readme).toContain("Apache License 2.0");
     expect(readme).not.toContain("\nMIT\n");
-    expect(readme).toContain("## このツールの目的");
-    expect(readme).toContain("## 主な機能");
-    expect(readme).toContain("長い AI チャット");
-    expect(readme).toContain("品質判定");
-    expect(readme).toContain("クリップボード");
+    expect(readme).toContain("## Why this tool exists");
+    expect(readme).toContain("## Key features");
+    expect(readme).toContain("quality check");
+    expect(readme).toContain("clipboard");
+    expect(readme).toContain("No browser extension is needed");
+    expect(readme).toContain("One-file version for Chrome / Chromium");
+    expect(readme).toContain("Remembers your mode and format in the browser");
+
+    expect(readmeJa).toContain("## このツールの目的");
+    expect(readmeJa).toContain("## 主な機能");
+    expect(readmeJa).toContain("長い AI チャット");
+    expect(readmeJa).toContain("品質判定");
+    expect(readmeJa).toContain("クリップボード");
+
+    expect(readmeZh).toContain("# AI 聊天导出");
+    expect(readmeZh).toContain("## 这个工具的用途");
+    expect(readmeZh).toContain("## 主要功能");
+    expect(readmeZh).toContain("质量检查");
+    expect(readmeZh).toContain("剪贴板");
   });
 
-  test("keeps docs/index.md as the only public markdown guide under docs", () => {
+  test("ships english and japanese public guides under docs", () => {
     const page = readRepoFile("docs", "index.md");
+    const pageJa = readRepoFile("docs", "index.ja.md");
+    const pageZh = readRepoFile("docs", "index.zh-CN.md");
 
-    expect(page).toContain("# AIチャット書き出し 使い方ガイド");
+    expect(page).toContain("# AI Chat Export Guide");
     expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
     expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
     expect(page).toContain("src/ai-chat-export.js");
     expect(page).toContain("scripts/generate_oneline_bookmarklet.sh");
-    expect(page).toContain("生成元");
-    expect(page).toContain("配布用");
+    expect(page).toContain("source");
+    expect(page).toContain("distribution");
     expect(page).not.toContain("bookmarklet.oneliner`");
     expect(page).not.toContain("unified.bookmarklet.oneliner`");
     expect(page).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
@@ -133,21 +155,38 @@ describe("repository layout", () => {
     expect(page).not.toContain("./ai-chat-export.public.min.js");
     expect(page).not.toContain("archive/README.ja.md");
     expect(page).not.toContain("archive/");
-    expect(page).not.toContain("README.ja.md");
-    expect(page).toContain("## 基本的な使い方");
-    expect(page).toContain("## 実行モードの違い");
-    expect(page).toContain("## 出力形式の違い");
-    expect(page).toContain("## 品質判定の見方");
-    expect(page).toContain("## 保存方法の違い");
-    expect(page).toContain("はやい");
-    expect(page).toContain("ふつう");
-    expect(page).toContain("ていねい");
+    expect(page).toContain("[Japanese guide](./index.ja.md)");
+    expect(page).toContain("[Chinese guide](./index.zh-CN.md)");
+    expect(page).toContain("## Basic usage");
+    expect(page).toContain("## Run modes");
+    expect(page).toContain("## Output formats");
+    expect(page).toContain("## Quality status");
+    expect(page).toContain("## Save options");
+    expect(page).toContain("Fast");
+    expect(page).toContain("Normal");
+    expect(page).toContain("Careful");
     expect(page).toContain("Markdown");
-    expect(page).toContain("プレーンテキスト");
+    expect(page).toContain("Plain text");
     expect(page).toContain("PASS");
     expect(page).toContain("WARN");
     expect(page).toContain("FAIL");
-    expect(page).toContain("クリップボード");
+    expect(page).toContain("clipboard");
+    expect(page).toContain("This public repo mainly ships these two bookmarklet files.");
+    expect(page).toContain("Scrolls more and opens more hidden content.");
+
+    expect(pageJa).toContain("# AIチャット書き出し 使い方ガイド");
+    expect(pageJa).toContain("## 基本的な使い方");
+    expect(pageJa).toContain("## 実行モードの違い");
+    expect(pageJa).toContain("## 出力形式の違い");
+    expect(pageJa).toContain("## 品質判定の見方");
+    expect(pageJa).toContain("## 保存方法の違い");
+
+    expect(pageZh).toContain("# AI 聊天导出使用指南");
+    expect(pageZh).toContain("## 基本用法");
+    expect(pageZh).toContain("## 运行模式");
+    expect(pageZh).toContain("## 输出格式");
+    expect(pageZh).toContain("## 质量状态");
+    expect(pageZh).toContain("## 保存方式");
   });
 
   test("keeps the docs bookmarklet asset synced with the root bookmarklet", () => {
@@ -189,7 +228,8 @@ describe("repository layout", () => {
   test("documents the public repository boundary for local-only files", () => {
     const readme = readRepoFile("README.md");
 
-    expect(readme).not.toContain("README.ja.md");
+    expect(readme).toContain("README.ja.md");
+    expect(readme).toContain("README.zh-CN.md");
     expect(readme).not.toContain("docs/README.ja.md");
   });
 
@@ -205,6 +245,11 @@ describe("repository layout", () => {
     expect(unified.length).toBeLessThan(62000);
     expect(/[^\x00-\x7F]/.test(unified)).toBe(false);
     expect(unified).toContain(".filter(Boolean)");
+    expect(unified).toContain("Export AI chat");
+    expect(unified).toContain("Review before saving");
+    expect(unified).toContain("Copy to clipboard");
+    expect(unified).toContain("Comparison base:");
+    expect(unified).toContain("Clipboard copy failed, switching to file save.");
   });
 
   test("keeps only the curated README screenshots under stable names", () => {
@@ -217,14 +262,26 @@ describe("repository layout", () => {
     expect(existsSync(rootPath("assets", "screenshots"))).toBe(false);
   });
 
-  test("points the japanese readme at the simplified public asset layout", () => {
+  test("points the public readmes at the simplified public asset layout", () => {
     const readme = readRepoFile("README.md");
+    const readmeJa = readRepoFile("README.ja.md");
+    const readmeZh = readRepoFile("README.zh-CN.md");
 
     expect(readme).toContain("assets/01-bookmark-setup.png");
     expect(readme).toContain("assets/02-config-dialog.png");
     expect(readme).toContain("assets/03-export-result.png");
     expect(readme).not.toContain("assets/screenshots/");
     expect(readme).not.toContain("assets/README.ja.md");
+
+    expect(readmeJa).toContain("assets/01-bookmark-setup.png");
+    expect(readmeJa).toContain("assets/02-config-dialog.png");
+    expect(readmeJa).toContain("assets/03-export-result.png");
+    expect(readmeJa).not.toContain("assets/screenshots/");
+
+    expect(readmeZh).toContain("assets/01-bookmark-setup.png");
+    expect(readmeZh).toContain("assets/02-config-dialog.png");
+    expect(readmeZh).toContain("assets/03-export-result.png");
+    expect(readmeZh).not.toContain("assets/screenshots/");
   });
 
   test("ships the repository under Apache License 2.0", () => {

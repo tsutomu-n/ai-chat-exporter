@@ -6,8 +6,36 @@ javascript:(async()=>{'use strict';
  * - 重要: サイトの表示や規約変更で壊れる可能性があります。壊れたら直す前提の個人ツールです。
  */
 
+function normalizeLangId(lang){
+  return lang === 'ja' || lang === 'en' ? lang : null;
+}
+
+function detectPreferredLang(){
+  try{
+    const raw = String(navigator?.language || navigator?.languages?.[0] || '').toLowerCase();
+    return raw.startsWith('ja') ? 'ja' : 'en';
+  }catch{
+    return 'en';
+  }
+}
+
+let runtimeLang = detectPreferredLang();
+
+function getRuntimeLang(){
+  return normalizeLangId(runtimeLang) || detectPreferredLang();
+}
+
+function setRuntimeLang(lang){
+  runtimeLang = normalizeLangId(lang) || detectPreferredLang();
+  return runtimeLang;
+}
+
+function isJapaneseLang(lang){
+  return normalizeLangId(lang || getRuntimeLang()) === 'ja';
+}
+
 if (window.__AI_CHAT_EXPORT_RUNNING__) {
-  try { alert('すでに実行中です。'); } catch {}
+  try { alert(isJapaneseLang() ? 'すでに実行中です。' : 'Already running.'); } catch {}
   return;
 }
 window.__AI_CHAT_EXPORT_RUNNING__ = true;
@@ -28,20 +56,14 @@ const THEME = {
 const ENABLE_OBSIDIAN_FORMAT = true;
 const BASE_FORMAT_DEFS = {
   std: Object.freeze({
-    label:'Markdown',
-    hint:'読みやすい普通の.md',
     ext:'md',
     mime:'text/markdown;charset=utf-8'
   }),
   txt: Object.freeze({
-    label:'プレーンテキスト',
-    hint:'装飾なしのテキスト',
     ext:'txt',
     mime:'text/plain;charset=utf-8'
   }),
   json: Object.freeze({
-    label:'JSON',
-    hint:'機械処理向け',
     ext:'json',
     mime:'application/json;charset=utf-8'
   })
@@ -49,13 +71,29 @@ const BASE_FORMAT_DEFS = {
 const FORMAT_DEFS = Object.freeze(ENABLE_OBSIDIAN_FORMAT ? {
   ...BASE_FORMAT_DEFS,
   obs: Object.freeze({
-    label:'Obsidian向け',
-    hint:'callout形式',
     ext:'md',
     mime:'text/markdown;charset=utf-8'
   })
 } : BASE_FORMAT_DEFS);
 const FORMAT_ORDER = ENABLE_OBSIDIAN_FORMAT ? ['std', 'txt', 'obs', 'json'] : ['std', 'txt', 'json'];
+const FORMAT_TEXT = Object.freeze({
+  std: Object.freeze({
+    label:{ja:'Markdown', en:'Markdown'},
+    hint:{ja:'読みやすい普通の.md', en:'Readable standard .md'}
+  }),
+  txt: Object.freeze({
+    label:{ja:'プレーンテキスト', en:'Plain text'},
+    hint:{ja:'装飾なしのテキスト', en:'Plain text without formatting'}
+  }),
+  json: Object.freeze({
+    label:{ja:'JSON', en:'JSON'},
+    hint:{ja:'機械処理向け', en:'Machine-readable export'}
+  }),
+  obs: Object.freeze({
+    label:{ja:'Obsidian向け', en:'For Obsidian'},
+    hint:{ja:'callout形式', en:'Callout format'}
+  })
+});
 
 function normalizeFormatId(fmt){
   return Object.prototype.hasOwnProperty.call(FORMAT_DEFS, fmt) ? fmt : 'std';
@@ -117,7 +155,11 @@ class Utils{
          .replace(/\s*\|\s*ChatGPT\s*$/i,'')
          .replace(/\s*-\s*Grok\s*$/i,'')
          .replace(/\s*\|\s*Grok\s*$/i,'');
-    return s || '会話';
+    return s || this.defaultConversationTitle();
+  }
+
+  static defaultConversationTitle(){
+    return isJapaneseLang() ? '会話' : 'Conversation';
   }
 
   static formatDateJST(d){
@@ -253,10 +295,11 @@ class MarkdownParser{
 
     // 画像
     if (tag === 'img'){
-      const alt = Utils.escapeMarkdownLinkLabel(el.getAttribute('alt') || '画像');
+      const imageFallback = isJapaneseLang() ? '画像' : 'Image';
+      const alt = Utils.escapeMarkdownLinkLabel(el.getAttribute('alt') || imageFallback);
       const src = Utils.escapeMarkdownLinkDestination(el.getAttribute('src') || '');
       if (src) return `![${alt}](${src})`;
-      return `![${alt}](画像)`;
+      return `![${alt}](${imageFallback})`;
     }
 
     // 子のMarkdown
@@ -292,7 +335,7 @@ class MarkdownParser{
       case 'a': {
         const hrefRaw = el.getAttribute('href') || '';
         const href = Utils.escapeMarkdownLinkDestination(hrefRaw);
-        const label = Utils.escapeMarkdownLinkLabel(children.trim() || hrefRaw || 'リンク');
+        const label = Utils.escapeMarkdownLinkLabel(children.trim() || hrefRaw || (isJapaneseLang() ? 'リンク' : 'Link'));
         if (!href) return label;
         return `[${label}](${href})`;
       }
@@ -418,7 +461,7 @@ class PlainTextFormatter{
           const a = String(alt || '').trim();
           const u = String(url || '').trim();
           if (a && u) return `${a} (${u})`;
-          return a || u || '画像';
+          return a || u || (isJapaneseLang() ? '画像' : 'Image');
         })
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url)=>{
           const l = String(label || '').trim();
@@ -449,11 +492,11 @@ class PlainTextFormatter{
 
 // ---------------- Adapters ----------------
 class BaseAdapter{
-  constructor(){ this.id='generic'; this.label='汎用'; }
+  constructor(){ this.id='generic'; this.label='Generic'; }
   matches(){ return true; }
   getConversationKey(){ return `${location.origin}${location.pathname}`; }
   getTitle(){
-    return Utils.normalizeTitle(document.title || '会話');
+    return Utils.normalizeTitle(document.title || Utils.defaultConversationTitle());
   }
   getPreferredScrollContainerSelectors(){ return []; }
   getQualityPolicy(){ return {penalizeWeakIdentity:true}; }
@@ -481,7 +524,7 @@ class ChatGPTAdapter extends BaseAdapter{
     // ChatGPTはサイドバーや上部にタイトルがあることが多い
     const h = document.querySelector('main h1, header h1, [data-testid="conversation-title"]');
     const t = (h?.textContent||'').trim();
-    return Utils.normalizeTitle(t || document.title || '会話');
+    return Utils.normalizeTitle(t || document.title || Utils.defaultConversationTitle());
   }
   getPreferredScrollContainerSelectors(){
     // だいたい main がスクロール
@@ -554,7 +597,7 @@ class AIStudioAdapter extends BaseAdapter{
   getTitle(){
     const h = document.querySelector('h1.mode-title, h1.actions, main h1, header h1');
     const t = (h?.textContent||'').trim();
-    return Utils.normalizeTitle(t || document.title || '会話');
+    return Utils.normalizeTitle(t || document.title || Utils.defaultConversationTitle());
   }
   getPreferredScrollContainerSelectors(){
     return ['ms-chat-history', 'main', 'div[role="main"]', 'body'];
@@ -625,7 +668,7 @@ class GrokAdapter extends BaseAdapter{
   }
   getTitle(){
     // Grokのタイトルは安定しないので document.title を素直に使う
-    return Utils.normalizeTitle(document.title || '会話');
+    return Utils.normalizeTitle(document.title || Utils.defaultConversationTitle());
   }
   getPreferredScrollContainerSelectors(){
     return ['main', 'div[role="main"]', 'section', 'body'];
@@ -804,7 +847,7 @@ class ClaudeAdapter extends BaseAdapter{
   getTitle(){
     const h = document.querySelector('main h1, header h1, [data-testid="conversation-title"], [data-testid="chat-title"]');
     const t = (h?.textContent||'').trim();
-    return Utils.normalizeTitle(t || document.title || '会話');
+    return Utils.normalizeTitle(t || document.title || Utils.defaultConversationTitle());
   }
   getPreferredScrollContainerSelectors(){
     return ['[data-testid="chat-messages"]', 'main', 'div[role="main"]', 'body'];
@@ -916,22 +959,23 @@ class ExpandEngine{
     } = opt||{};
     if (!enabled) return {clicked:0, rounds:0};
     const isAborted = ()=>!!(abortSignal && abortSignal.aborted);
+    const isJa = isJapaneseLang(abortSignal?.lang);
     const emit = (p)=>{ if (typeof onProgress==='function') { try{onProgress(p);}catch{} } };
 
     let clicked=0, rounds=0;
     for(;;){
-      if (isAborted()) throw new Error('中断しました');
+      if (isAborted()) throw new Error(isJa ? '中断しました' : 'Aborted');
       const btns = adapter.findExpandButtons(root).slice(0, Math.max(0, maxClicks-clicked));
       if (!btns.length) break;
       rounds++;
       for (const b of btns){
-        if (isAborted()) throw new Error('中断しました');
+        if (isAborted()) throw new Error(isJa ? '中断しました' : 'Aborted');
         try{
           b.click();
           clicked++;
           if (clicked>=maxClicks) break;
         }catch{}
-        emit({stage:'expand', message:`本文を展開中…（${clicked}回）`});
+        emit({stage:'expand', message:isJa ? `本文を展開中…（${clicked}回）` : `Expanding collapsed content… (${clicked})`});
         await Utils.sleep(delayMs);
       }
       if (clicked>=maxClicks) break;
@@ -1036,7 +1080,8 @@ class ScrollEngine{
   static async harvest(adapter, cfg, onProgress, abortSignal){
     const emit = (p)=>{ if (typeof onProgress==='function'){ try{onProgress(p);}catch{} } };
     const isAborted = ()=>!!(abortSignal && abortSignal.aborted);
-    const ensure=()=>{ if (isAborted()) throw new Error('中断しました'); };
+    const isJa = isJapaneseLang(cfg?.lang || abortSignal?.lang);
+    const ensure=()=>{ if (isAborted()) throw new Error(isJa ? '中断しました' : 'Aborted'); };
 
     const container = this.findScrollContainer(adapter);
     const rootScroller = this.getDocumentScroller();
@@ -1273,9 +1318,9 @@ class ScrollEngine{
     };
 
     // stage: prepare
-    emit({stage:'prepare', message:'会話の位置を確認しています…', count: capture()});
+    emit({stage:'prepare', message:isJa ? '会話の位置を確認しています…' : 'Checking where the conversation starts…', count: capture()});
     await maybeExpand('final');
-    emit({stage:'prepare', message:'会話を検出しました。読み込みを開始します…', count: capture()});
+    emit({stage:'prepare', message:isJa ? '会話を検出しました。読み込みを開始します…' : 'Conversation detected. Starting the scan…', count: capture()});
     await Utils.sleep(isFastPreset ? 80 : 180);
 
     // stage: top
@@ -1284,7 +1329,7 @@ class ScrollEngine{
     for (let i=0;i<cfg.scrollMax;i++){
       ensure();
       stats.topIterations++;
-      emit({stage:'top', message:'古い会話を上まで読み込んでいます…', iter:i+1, max:cfg.scrollMax, count: messageMap.size});
+      emit({stage:'top', message:isJa ? '古い会話を上まで読み込んでいます…' : 'Loading older messages toward the top…', iter:i+1, max:cfg.scrollMax, count: messageMap.size});
 
       const y = getY();
       const step = getViewportH()*0.85;
@@ -1320,7 +1365,7 @@ class ScrollEngine{
         stats.topSettleIterations++;
         emit({
           stage:'top_settle',
-          message:'先頭追い込み中…',
+          message:isJa ? '先頭追い込み中…' : 'Settling at the top…',
           iter:i+1,
           max:topSettleMaxRounds,
           count: messageMap.size
@@ -1362,7 +1407,7 @@ class ScrollEngine{
     for (let i=0;i<cfg.scrollMax;i++){
       ensure();
       stats.downIterations++;
-      emit({stage:'down', message:'最新の会話まで読み込んでいます…', iter:i+1, max:cfg.scrollMax, count: messageMap.size});
+      emit({stage:'down', message:isJa ? '最新の会話まで読み込んでいます…' : 'Loading toward the latest messages…', iter:i+1, max:cfg.scrollMax, count: messageMap.size});
 
       const y = getY();
       const step = getViewportH()*0.85;
@@ -1393,7 +1438,7 @@ class ScrollEngine{
 
     // stage: final settle
     ensure();
-    emit({stage:'final', message:'最終確認中…', count: messageMap.size});
+    emit({stage:'final', message:isJa ? '最終確認中…' : 'Running final checks…', count: messageMap.size});
     let finalStableHits = 0;
     let finalNewTotal = 0;
     for (let i=0;i<settleLoops;i++){
@@ -1432,9 +1477,59 @@ class App{
     this.adapter = AdapterFactory.getAdapter();
     this.siteId = this.adapter.id;
     this.config = this.loadConfig();
+    setRuntimeLang(this.getLang());
     this.abortState = {aborted:false};
     this.busyOverlay = null;
     this.pendingRerunSnapshot = null;
+  }
+
+  getLang(){
+    return normalizeLangId(this.config?.lang) || getRuntimeLang();
+  }
+
+  isJapanese(){
+    return this.getLang() === 'ja';
+  }
+
+  numberLocale(){
+    return this.isJapanese() ? 'ja-JP' : 'en-US';
+  }
+
+  formatNumber(value){
+    return Number(value ?? 0).toLocaleString(this.numberLocale());
+  }
+
+  formatCount(value){
+    return this.isJapanese() ? `${this.formatNumber(value)}件` : `${this.formatNumber(value)}`;
+  }
+
+  formatTimes(value){
+    return this.isJapanese() ? `${this.formatNumber(value)}回` : `${this.formatNumber(value)} times`;
+  }
+
+  formatPoints(value){
+    return this.isJapanese() ? `${this.formatNumber(value)}点` : `${this.formatNumber(value)} pts`;
+  }
+
+  yesNo(value){
+    return this.isJapanese() ? (value ? 'はい' : 'いいえ') : (value ? 'Yes' : 'No');
+  }
+
+  getSiteLabel(){
+    return this.adapter.id === 'generic'
+      ? (this.isJapanese() ? '汎用' : 'Generic')
+      : this.adapter.label;
+  }
+
+  languageLabel(lang){
+    return lang === 'ja' ? '日本語' : 'English';
+  }
+
+  languageDescription(lang){
+    if (this.isJapanese()){
+      return lang === 'ja' ? '日本語UIと出力ラベル' : '英語UIと出力ラベル';
+    }
+    return lang === 'ja' ? 'Japanese UI and output labels' : 'English UI and output labels';
   }
 
   storageKeys(){
@@ -1470,6 +1565,7 @@ class App{
     const preset = (raw && typeof raw.preset === 'string' && presets[raw.preset]) ? raw.preset : def.preset;
     const merged = {
       ...def,
+      lang: normalizeLangId(raw?.lang) || def.lang,
       preset,
       fmt: normalizeFormatId(raw && typeof raw.fmt === 'string' ? raw.fmt : def.fmt),
       txtHeader: typeof raw?.txtHeader === 'boolean' ? raw.txtHeader : def.txtHeader,
@@ -1491,6 +1587,7 @@ class App{
 
   getPersistedConfig(){
     return {
+      lang: this.getLang(),
       fmt: this.getFormatId(),
       txtHeader: !!this.config.txtHeader,
       preset: this.config.preset,
@@ -1510,6 +1607,7 @@ class App{
       careful: { scrollMax: 96, scrollDelay: 420, autoExpand:true,  expandMaxClicks: 80, expandClickDelay: 150 }
     };
     return {
+      lang: detectPreferredLang(),
       fmt:'std', // std|txt|json|obs?
       txtHeader:true,
       preset:'normal',
@@ -1538,6 +1636,7 @@ class App{
       const normalized = this.normalizeStoredConfig(cfg, def);
       if (!cfgFromNew && legacyCfg){
         this.safeSet(cfgKey, {
+          lang: normalized.lang,
           fmt: normalized.fmt,
           preset: normalized.preset,
           scrollMax: normalized.scrollMax,
@@ -1556,6 +1655,7 @@ class App{
 
   saveConfig(){
     const {cfgKey} = this.storageKeys();
+    setRuntimeLang(this.getLang());
     this.safeSet(cfgKey, this.getPersistedConfig());
   }
 
@@ -1695,7 +1795,7 @@ class App{
     const nowCount = messages.length;
     const nowDigest = this.computeRunDigest(messages);
     let previous = savedPrevious;
-    let previousLabel = '前回';
+    let previousLabel = this.isJapanese() ? '前回' : 'Previous';
     let comparisonKind = 'saved';
 
     if (comparisonSnapshot && Array.isArray(comparisonSnapshot.messages)){
@@ -1703,7 +1803,7 @@ class App{
         count: comparisonSnapshot.messages.length,
         digest: this.computeRunDigest(comparisonSnapshot.messages)
       };
-      previousLabel = '前回結果';
+      previousLabel = this.isJapanese() ? '前回結果' : 'Previous result';
       comparisonKind = 'snapshot';
     }
 
@@ -1741,17 +1841,30 @@ class App{
   }
 
   getPresetLabelFor(preset){
-    return preset==='fast'?'はやい' : preset==='careful'?'ていねい' : 'ふつう';
+    if (this.isJapanese()){
+      return preset==='fast'?'はやい' : preset==='careful'?'ていねい' : 'ふつう';
+    }
+    return preset==='fast'?'Fast' : preset==='careful'?'Careful' : 'Normal';
   }
 
   buildResultSnapshotSummaryLines(snapshot){
     if (!snapshot) return [];
-    const lines = [
-      `会話数: ${(snapshot.messages || []).length}件`,
-      `取得モード: ${this.getPresetLabelFor(snapshot.preset)}`
-    ];
+    const count = this.formatCount((snapshot.messages || []).length);
+    const lines = this.isJapanese()
+      ? [
+          `会話数: ${count}`,
+          `取得モード: ${this.getPresetLabelFor(snapshot.preset)}`
+        ]
+      : [
+          `Messages: ${count}`,
+          `Mode: ${this.getPresetLabelFor(snapshot.preset)}`
+        ];
     if (snapshot.quality){
-      lines.push(`判定: ${snapshot.quality.status || 'WARN'}（${snapshot.quality.score ?? 0}点）`);
+      lines.push(
+        this.isJapanese()
+          ? `判定: ${snapshot.quality.status || 'WARN'}（${this.formatPoints(snapshot.quality.score ?? 0)}）`
+          : `Status: ${snapshot.quality.status || 'WARN'} (${this.formatPoints(snapshot.quality.score ?? 0)})`
+      );
     }
     return lines;
   }
@@ -1764,8 +1877,12 @@ class App{
       const result = await this.showResultDialog(current.messages, current.quality, {
         preset: current?.preset || this.config.preset,
         alternateSnapshot: alternate,
-        alternateTitle: showingPrimary ? '再実行前の結果を保持中' : '今回の再取得結果も保持中',
-        alternateButtonLabel: showingPrimary ? '前回結果を見る' : '今回結果を見る'
+        alternateTitle: showingPrimary
+          ? (this.isJapanese() ? '再実行前の結果を保持中' : 'Previous result kept')
+          : (this.isJapanese() ? '今回の再取得結果も保持中' : 'Current result kept'),
+        alternateButtonLabel: showingPrimary
+          ? (this.isJapanese() ? '前回結果を見る' : 'View previous result')
+          : (this.isJapanese() ? '今回結果を見る' : 'View current result')
       });
       if (result?.action==='show_alternate_result' && alternate){
         const previousCurrent = current;
@@ -1868,16 +1985,40 @@ class App{
   // ---- dialogs ----
   async showConfigDialog(){
     return new Promise(resolve=>{
+      const isJa = this.isJapanese();
+      const rerender = ()=>{
+        ov.remove();
+        this.showConfigDialog().then(resolve);
+      };
       const ov = this.overlay();
       const modal = Utils.el('div',{style:`width:min(640px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
 
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
-        Utils.el('div',{text:'AIチャットを書き出す',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
-        Utils.el('div',{text:`サイト: ${this.adapter.label}`,style:`font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:600;`})
+        Utils.el('div',{text:isJa ? 'AIチャットを書き出す' : 'Export AI chat',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
+        Utils.el('div',{text:isJa ? `サイト: ${this.getSiteLabel()}` : `Site: ${this.getSiteLabel()}`,style:`font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:600;`})
       ]);
 
       const body = Utils.el('div',{style:'padding:18px 22px;'});
-      body.appendChild(this.sectionTitle('速度プリセット'));
+      body.appendChild(this.sectionTitle(isJa ? '言語' : 'Language'));
+      const langWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
+      const langBtn = (lang)=>{
+        const active = this.getLang()===lang;
+        const btn = Utils.el('button',{style:`padding:11px 12px;border-radius:12px;border:1px solid ${active?THEME.accentLine:THEME.border};background:${active?'rgba(95,162,255,0.14)':THEME.bg};color:${THEME.fg};cursor:pointer;`});
+        btn.append(
+          Utils.el('div',{text:this.languageLabel(lang),style:'font-weight:700;font-size:14px;line-height:1.45;'}),
+          Utils.el('div',{text:this.languageDescription(lang),style:`margin-top:4px;font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
+        );
+        btn.addEventListener('click', ()=>{
+          this.config.lang = lang;
+          this.saveConfig();
+          rerender();
+        });
+        return btn;
+      };
+      langWrap.append(langBtn('en'), langBtn('ja'));
+      body.appendChild(langWrap);
+
+      body.appendChild(this.sectionTitle(isJa ? '速度プリセット' : 'Mode'));
       const presetWrap = Utils.el('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;'});
       const presetCard = (id, title, desc)=>{
         const active = this.config.preset===id;
@@ -1889,16 +2030,14 @@ class App{
         card.addEventListener('click', ()=>{
           this.applyPreset(id);
           this.saveConfig();
-          // 画面更新: 簡易にリロード
-          ov.remove();
-          this.showConfigDialog().then(resolve);
+          rerender();
         });
         return card;
       };
       presetWrap.append(
-        presetCard('fast','はやい','短い会話向き。最速・展開なし'),
-        presetCard('normal','ふつう','既定。普段使い向け'),
-        presetCard('careful','ていねい','長い会話向き。先頭追い込みあり')
+        presetCard('fast',this.getPresetLabelFor('fast'),isJa ? '短い会話向き。最速・展開なし' : 'Best for short chats. No expansion.'),
+        presetCard('normal',this.getPresetLabelFor('normal'),isJa ? '既定。普段使い向け' : 'Default. Good for most chats.'),
+        presetCard('careful',this.getPresetLabelFor('careful'),isJa ? '長い会話向き。先頭追い込みあり' : 'Best for long chats. Scrolls more to reach the top.')
       );
       body.appendChild(presetWrap);
 
@@ -1910,25 +2049,25 @@ class App{
       expandRow.append(
         cb,
         Utils.el('div',{},[
-          Utils.el('div',{text:'本文の「続きを読む」等を自動で開く',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
-          Utils.el('div',{text:'漏れ対策に効きます。誤爆しないよう安全側に制限しています。',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+          Utils.el('div',{text:isJa ? '本文の「続きを読む」等を自動で開く' : 'Auto-expand “Show more” buttons',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
+          Utils.el('div',{text:isJa ? '漏れ対策に効きます。誤爆しないよう安全側に制限しています。' : 'Helps avoid missing content. Uses safe clicks to avoid mistakes.',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
         ])
       );
       body.appendChild(expandRow);
 
       // 形式
-      body.appendChild(this.sectionTitle('保存形式'));
+      body.appendChild(this.sectionTitle(isJa ? '保存形式' : 'Save format'));
       const fmtWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
       const fmtBtn = (id, def)=>{
         const active = this.getFormatId()===id;
         const b = Utils.el('button',{style:`padding:11px 12px;border-radius:12px;border:1px solid ${active?THEME.accentLine:THEME.border};background:${active?'rgba(95,162,255,0.14)':THEME.bg};color:${THEME.fg};cursor:pointer;`});
         b.append(Utils.el('div',{text:def.label,style:'font-weight:700;font-size:14px;line-height:1.45;'}),
                  Utils.el('div',{text:def.hint,style:`margin-top:4px;font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:500;`}));
-        b.addEventListener('click', ()=>{ this.config.fmt=id; this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); });
+        b.addEventListener('click', ()=>{ this.config.fmt=id; this.saveConfig(); rerender(); });
         return b;
       };
       for (const id of FORMAT_ORDER){
-        fmtWrap.append(fmtBtn(id, FORMAT_DEFS[id]));
+        fmtWrap.append(fmtBtn(id, this.getFormatDefFor(id)));
       }
       body.appendChild(fmtWrap);
 
@@ -1943,8 +2082,8 @@ class App{
         txtRow.append(
           txtHeaderCb,
           Utils.el('div',{},[
-            Utils.el('div',{text:'会話ヘッダーを付ける',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
-            Utils.el('div',{text:'タイトル、保存日時、URL、品質判定を先頭に入れます。本文だけ欲しい場合は外してください。',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+            Utils.el('div',{text:isJa ? '会話ヘッダーを付ける' : 'Include conversation header',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
+            Utils.el('div',{text:isJa ? 'タイトル、保存日時、URL、品質判定を先頭に入れます。本文だけ欲しい場合は外してください。' : 'Adds the title, time, URL, and quality summary above the text. Turn this off if you want only the conversation text.',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
           ])
         );
         body.appendChild(txtRow);
@@ -1952,37 +2091,37 @@ class App{
 
       // 詳細
       const details = Utils.el('details',{style:`margin-top:14px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-      const sum = Utils.el('summary',{text:'細かく調整する',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`});
+      const sum = Utils.el('summary',{text:isJa ? '細かく調整する' : 'Advanced settings',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`});
       const inner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
       const slider = (label, key, min, max, step, unit)=>{
         const row = Utils.el('div',{style:'display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;'});
         const left = Utils.el('div',{},[
           Utils.el('div',{text:label,style:'font-weight:700;font-size:14px;line-height:1.5;'}),
-          Utils.el('div',{text:`現在: ${this.config[key]}${unit}`,style:`font-size:14px;line-height:1.6;color:${THEME.muted};margin-top:2px;font-weight:500;`})
+          Utils.el('div',{text:isJa ? `現在: ${this.config[key]}${unit}` : `Current: ${this.config[key]}${unit}`,style:`font-size:14px;line-height:1.6;color:${THEME.muted};margin-top:2px;font-weight:500;`})
         ]);
         const input = Utils.el('input',{type:'range',min:String(min),max:String(max),step:String(step),value:String(this.config[key]),style:'width:220px;'});
         input.addEventListener('input', ()=>{
           this.config[key]=Number(input.value);
           this.saveConfig();
-          left.querySelectorAll('div')[1].textContent = `現在: ${this.config[key]}${unit}`;
+          left.querySelectorAll('div')[1].textContent = isJa ? `現在: ${this.config[key]}${unit}` : `Current: ${this.config[key]}${unit}`;
         });
         row.append(left, input);
         return row;
       };
       inner.append(
-        slider('各方向の最大スクロール回数','scrollMax', 10, 220, 2, '回'),
-        slider('待ち時間','scrollDelay', 120, 1200, 20, 'ms'),
-        slider('展開クリック上限','expandMaxClicks', 0, 600, 10, '回'),
-        slider('展開クリック間隔','expandClickDelay', 80, 600, 10, 'ms'),
-        Utils.el('div',{text:'※ プリセットを選ぶと、ここは上書きされます（必要なら再調整してください）。',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+        slider(isJa ? '各方向の最大スクロール回数' : 'Max scroll rounds per direction','scrollMax', 10, 220, 2, isJa ? '回' : ''),
+        slider(isJa ? '待ち時間' : 'Delay between rounds','scrollDelay', 120, 1200, 20, 'ms'),
+        slider(isJa ? '展開クリック上限' : 'Max auto-expands','expandMaxClicks', 0, 600, 10, isJa ? '回' : ''),
+        slider(isJa ? '展開クリック間隔' : 'Auto-expand interval','expandClickDelay', 80, 600, 10, 'ms'),
+        Utils.el('div',{text:isJa ? '※ プリセットを選ぶと、ここは上書きされます（必要なら再調整してください）。' : '* Choosing a preset overwrites these values. Adjust again afterward if needed.',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
       );
       details.append(sum, inner);
       body.appendChild(details);
 
       const footer = Utils.el('div',{style:`padding:16px 22px;background:${THEME.bg};border-top:1px solid ${THEME.border};display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;`});
       footer.append(
-        this.btn('キャンセル','subtle', ()=>{ ov.remove(); resolve(false); }),
-        this.btn('開始','primary', ()=>{ ov.remove(); resolve(true); })
+        this.btn(isJa ? 'キャンセル' : 'Cancel','subtle', ()=>{ ov.remove(); resolve(false); }),
+        this.btn(isJa ? '開始' : 'Start','primary', ()=>{ ov.remove(); resolve(true); })
       );
 
       modal.append(header, body, footer);
@@ -1992,11 +2131,12 @@ class App{
   }
 
   showBusyDialog(){
+    const isJa = this.isJapanese();
     const ov = this.overlay();
     const modal = Utils.el('div',{style:`width:min(520px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
     const header = Utils.el('div',{style:`padding:18px 20px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`});
-    const title = Utils.el('div',{text:'準備しています',style:'font-size:19px;line-height:1.4;font-weight:700;margin-bottom:6px;'});
-    const desc = Utils.el('div',{text:'ページをスクロールして会話を集めています…',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`});
+    const title = Utils.el('div',{text:isJa ? '準備しています' : 'Preparing',style:'font-size:19px;line-height:1.4;font-weight:700;margin-bottom:6px;'});
+    const desc = Utils.el('div',{text:isJa ? 'ページをスクロールして会話を集めています…' : 'Scrolling through the page and collecting messages…',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`});
     header.append(title, desc);
 
     const body = Utils.el('div',{style:'padding:16px 20px;'});
@@ -2007,7 +2147,7 @@ class App{
     body.append(barWrap, info);
 
     const footer = Utils.el('div',{style:`padding:14px 20px;background:${THEME.bg};border-top:1px solid ${THEME.border};display:flex;justify-content:flex-end;`});
-    footer.append(this.btn('中断','danger', ()=>{ this.abortState.aborted=true; Utils.toast('中断しました。', 'warn'); }));
+    footer.append(this.btn(isJa ? '中断' : 'Abort','danger', ()=>{ this.abortState.aborted=true; Utils.toast(isJa ? '中断しました。' : 'Aborted.', 'warn'); }));
 
     modal.append(header, body, footer);
     ov.appendChild(modal);
@@ -2020,12 +2160,13 @@ class App{
   updateBusyDialog(p){
     if (!this.busyUI) return;
     const stage = p?.stage || '';
-    const stageTitle = stage==='prepare'?'準備しています'
-      : stage==='top'?'古い会話を読み込んでいます'
-      : stage==='down'?'最新の会話まで読み込んでいます'
-      : stage==='expand'?'本文を展開しています'
-      : stage==='final'?'最終確認中'
-      : '処理中';
+    const isJa = this.isJapanese();
+    const stageTitle = stage==='prepare' ? (isJa ? '準備しています' : 'Preparing')
+      : stage==='top' ? (isJa ? '古い会話を読み込んでいます' : 'Loading older messages')
+      : stage==='down' ? (isJa ? '最新の会話まで読み込んでいます' : 'Loading toward the latest messages')
+      : stage==='expand' ? (isJa ? '本文を展開しています' : 'Expanding collapsed content')
+      : stage==='final' ? (isJa ? '最終確認中' : 'Final checks')
+      : (isJa ? '処理中' : 'Processing');
     this.busyUI.title.textContent = stageTitle;
     if (p?.message) this.busyUI.desc.textContent = p.message;
 
@@ -2042,8 +2183,8 @@ class App{
 
     const c = Number.isFinite(p?.count) ? p.count : null;
     const parts=[];
-    if (c!=null) parts.push(`見つかった会話: ${c}件`);
-    if (iter!=null && max!=null) parts.push(`進行: ${iter}/${max}`);
+    if (c!=null) parts.push(isJa ? `見つかった会話: ${this.formatCount(c)}` : `Messages found: ${this.formatNumber(c)}`);
+    if (iter!=null && max!=null) parts.push(isJa ? `進行: ${iter}/${max}` : `Progress: ${iter}/${max}`);
     this.busyUI.info.textContent = parts.join(' / ');
   }
 
@@ -2056,18 +2197,30 @@ class App{
   qualitySummary(quality, diff){
     // qualityが無いケースもある
     const q = quality || {status:'WARN', score:0};
-    const label = q.status==='PASS'?'良好' : q.status==='WARN'?'やや不安' : '要再実行';
+    const label = this.isJapanese()
+      ? (q.status==='PASS'?'良好' : q.status==='WARN'?'やや不安' : '要再実行')
+      : (q.status==='PASS'?'Looks good' : q.status==='WARN'?'Needs a quick check' : 'Rerun recommended');
     const color = q.status==='PASS'?THEME.ok : q.status==='WARN'?THEME.warn : THEME.bad;
 
     let hint = '';
-    if (q.status==='PASS') hint = '概ね問題なさそうです。';
-    else if (q.status==='WARN') hint = '会話が長い場合は、もう一度実行すると安定することがあります。';
-    else hint = '取得漏れの可能性が高いです。もう一度実行を推奨します。';
+    if (q.status==='PASS') hint = this.isJapanese()
+      ? '概ね問題なさそうです。'
+      : 'The result looks stable enough to save.';
+    else if (q.status==='WARN') hint = this.isJapanese()
+      ? '会話が長い場合は、もう一度実行すると安定することがあります。'
+      : 'If the chat is long, rerunning once may improve stability.';
+    else hint = this.isJapanese()
+      ? '取得漏れの可能性が高いです。もう一度実行を推奨します。'
+      : 'Missing content is likely. Rerun before saving.';
 
     if ((q.weakIdentityMessages||0) > 0 && !q.identityStable){
-      hint = '一部メッセージの識別が弱く、重複や順序の精度が落ちる可能性があります。';
+      hint = this.isJapanese()
+        ? '一部メッセージの識別が弱く、重複や順序の精度が落ちる可能性があります。'
+        : 'Some message identities are weak, so dedupe and ordering may be less reliable.';
     } else if ((q.unknownMessages||0) > 0){
-      hint = '一部メッセージの話者判定が不明です。DOM変更の影響を受けている可能性があります。';
+      hint = this.isJapanese()
+        ? '一部メッセージの話者判定が不明です。DOM変更の影響を受けている可能性があります。'
+        : 'Some speaker labels are unknown. A DOM change may have affected extraction.';
     }
 
     // diffによる追加ヒント
@@ -2075,17 +2228,27 @@ class App{
     const abortedLast = diff?.lastAttempt?.status==='aborted' || diff?.lastAttempt?.status==='cancel';
     if (diff?.previous){
       const sign = diff.diff>0?'+':'';
-      diffLine = `${diff.previousLabel || '前回'}: ${diff.previous.count}件 / 今回: ${diff.now.count}件（差分 ${sign}${diff.diff}件）`;
+      diffLine = this.isJapanese()
+        ? `${diff.previousLabel || '前回'}: ${this.formatCount(diff.previous.count)} / 今回: ${this.formatCount(diff.now.count)}（差分 ${sign}${this.formatCount(diff.diff)}）`
+        : `${diff.previousLabel || 'Previous'}: ${this.formatNumber(diff.previous.count)} / Current: ${this.formatNumber(diff.now.count)} (delta ${sign}${this.formatNumber(diff.diff)})`;
       if (!diff.stable && diff.rate>=0.12){
-        hint = '前回との差が大きいです。スクロールが途中で止まった可能性があります。';
+        hint = this.isJapanese()
+          ? '前回との差が大きいです。スクロールが途中で止まった可能性があります。'
+          : 'The difference from the previous result is large. Scrolling may have stopped early.';
       } else if (diff.digestSame){
-        hint = '前回とほぼ同じ内容です（安定）。';
+        hint = this.isJapanese()
+          ? '前回とほぼ同じ内容です（安定）。'
+          : 'This is almost identical to the previous result.';
       }
     }
 
     if (!diff?.previous && abortedLast){
-      diffLine = '前回: 保存なし（中断）。今回は新規再取得で比較基準はリセットされます。';
-      hint = '前回は保存されていないため、今回は保存結果を基準に比較します。';
+      diffLine = this.isJapanese()
+        ? '前回: 保存なし（中断）。今回は新規再取得で比較基準はリセットされます。'
+        : 'Previous: not saved (aborted). The comparison base was reset for this fresh rerun.';
+      hint = this.isJapanese()
+        ? '前回は保存されていないため、今回は保存結果を基準に比較します。'
+        : 'The previous run was not saved, so future comparisons will use this saved result.';
     }
     return {label, color, hint, diffLine, score:q.score, raw:q};
   }
@@ -2096,8 +2259,19 @@ class App{
   getFormatId(){
     return normalizeFormatId(this.config.fmt);
   }
+  getFormatDefFor(id){
+    const lang = this.getLang();
+    const normalizedId = normalizeFormatId(id);
+    const def = FORMAT_DEFS[normalizedId];
+    const text = FORMAT_TEXT[normalizedId] || FORMAT_TEXT.std;
+    return {
+      ...def,
+      label: text?.label?.[lang] || text?.label?.en || 'Markdown',
+      hint: text?.hint?.[lang] || text?.hint?.en || ''
+    };
+  }
   getFormatDef(){
-    return FORMAT_DEFS[this.getFormatId()];
+    return this.getFormatDefFor(this.getFormatId());
   }
   getFormatLabel(){
     return this.getFormatDef().label;
@@ -2107,10 +2281,10 @@ class App{
   }
 
   roleLabel(role){
-    if (role==='User') return 'あなた';
+    if (role==='User') return this.isJapanese() ? 'あなた' : 'You';
     if (role==='Model') return 'AI';
-    if (role==='Tool') return 'ツール';
-    return '不明';
+    if (role==='Tool') return this.isJapanese() ? 'ツール' : 'Tool';
+    return this.isJapanese() ? '不明' : 'Unknown';
   }
 
   yamlValue(v){
@@ -2123,7 +2297,7 @@ class App{
     const warning = this.warningSummary({quality, diff});
     return {
       title: title,
-      site: this.adapter.label,
+      site: this.getSiteLabel(),
       conversation_url: location.href,
       saved_at: Utils.formatDateJST(new Date()),
       message_count: messages.length,
@@ -2155,77 +2329,116 @@ class App{
     const hasWarning = qWarn || diffWarn;
     const parts = [];
     if (!diff?.previous && (diff?.lastAttempt?.status==='aborted' || diff?.lastAttempt?.status==='cancel')){
-      parts.push('前回は保存されず中断');
+      parts.push(this.isJapanese() ? '前回は保存されず中断' : 'previous run aborted before saving');
     } else if (!diff?.previous){
-      parts.push('前回データなし');
+      parts.push(this.isJapanese() ? '前回データなし' : 'no previous data');
     }
     if (qWarn){
-      parts.push(q.status==='WARN' ? 'やや不安' : '要再実行');
+      parts.push(this.isJapanese()
+        ? (q.status==='WARN' ? 'やや不安' : '要再実行')
+        : (q.status==='WARN' ? 'needs a quick check' : 'rerun recommended'));
     }
     if (diffWarn){
-      parts.push('前回との差が大きい');
+      parts.push(this.isJapanese() ? '前回との差が大きい' : 'large delta from previous');
     }
-    const text = hasWarning ? Array.from(new Set(parts)).join(' / ') : 'なし';
+    const text = hasWarning
+      ? Array.from(new Set(parts)).join(' / ')
+      : (this.isJapanese() ? 'なし' : 'none');
     return {hasWarning, text};
   }
 
   compactSummaryLines(messages, quality, diff, savedState='未保存'){
     const qWarn = this.warningSummary({quality, diff});
-    const warningTail = qWarn.hasWarning && qWarn.text ? `（${qWarn.text}）` : '';
-    return [
-      `抽出件数: ${messages.length}件`,
-      `保存状態: ${savedState}`,
-      `警告有無: ${qWarn.hasWarning?'あり':'なし'}${warningTail}`
-    ];
+    const warningTail = qWarn.hasWarning && qWarn.text
+      ? (this.isJapanese() ? `（${qWarn.text}）` : ` (${qWarn.text})`)
+      : '';
+    return this.isJapanese()
+      ? [
+          `抽出件数: ${this.formatCount(messages.length)}`,
+          `保存状態: ${savedState}`,
+          `警告有無: ${qWarn.hasWarning?'あり':'なし'}${warningTail}`
+        ]
+      : [
+          `Extracted: ${this.formatNumber(messages.length)} messages`,
+          `Save state: ${savedState}`,
+          `Warnings: ${qWarn.hasWarning?'yes':'no'}${warningTail}`
+        ];
   }
 
   lastAttemptStatusLabel(){
     const {previous, lastAttempt} = this.loadRunMeta();
     const status = lastAttempt?.status;
-    const map = {
-      success: '保存済み（成功）',
-      failed: '保存せず失敗',
-      aborted: '未保存で中断',
-      cancel: '未保存で中止',
-      rerun_requested: '再実行要求があった状態',
-      running: '実行中（前回保存を参照）'
-    };
-    if (!status) return `最終保存: ${Number.isFinite(previous?.count) ? `${previous.count}件` : 'なし'}`;
-    if (status === 'running') return `最終保存: ${Number.isFinite(previous?.count) ? `${previous.count}件` : 'なし'}`;
-    const suffix = map[status] || `状態:${status}`;
-    const c = Number.isFinite(lastAttempt.count) ? `（${lastAttempt.count}件）` : '';
-    return `直近試行: ${suffix}${c}`;
+    const map = this.isJapanese()
+      ? {
+          success: '保存済み（成功）',
+          failed: '保存せず失敗',
+          aborted: '未保存で中断',
+          cancel: '未保存で中止',
+          rerun_requested: '再実行要求があった状態',
+          running: '実行中（前回保存を参照）'
+        }
+      : {
+          success: 'saved successfully',
+          failed: 'failed without saving',
+          aborted: 'aborted without saving',
+          cancel: 'canceled without saving',
+          rerun_requested: 'rerun requested',
+          running: 'running (referencing previous save)'
+        };
+    const previousCount = Number.isFinite(previous?.count)
+      ? (this.isJapanese() ? this.formatCount(previous.count) : this.formatNumber(previous.count))
+      : (this.isJapanese() ? 'なし' : 'none');
+    if (!status) return this.isJapanese() ? `最終保存: ${previousCount}` : `Last saved: ${previousCount}`;
+    if (status === 'running') return this.isJapanese() ? `最終保存: ${previousCount}` : `Last saved: ${previousCount}`;
+    const suffix = map[status] || (this.isJapanese() ? `状態:${status}` : `status: ${status}`);
+    const c = Number.isFinite(lastAttempt.count)
+      ? (this.isJapanese() ? `（${this.formatCount(lastAttempt.count)}）` : ` (${this.formatNumber(lastAttempt.count)})`)
+      : '';
+    return this.isJapanese() ? `直近試行: ${suffix}${c}` : `Latest attempt: ${suffix}${c}`;
   }
 
   comparisonBaseLabel(diff){
     if (Number.isFinite(diff?.previous?.count)){
-      const prefix = diff?.comparisonKind === 'snapshot' ? `${diff.previousLabel || '前回結果'} ` : '';
-      return `比較ベース: ${prefix}${diff.previous.count}件`;
+      const prefix = diff?.comparisonKind === 'snapshot'
+        ? `${diff.previousLabel || (this.isJapanese() ? '前回結果' : 'Previous result')} `
+        : '';
+      return this.isJapanese()
+        ? `比較ベース: ${prefix}${this.formatCount(diff.previous.count)}`
+        : `Comparison base: ${prefix}${this.formatNumber(diff.previous.count)}`;
     }
-    return '比較ベース: なし（保存済みなし）';
+    return this.isJapanese()
+      ? '比較ベース: なし（保存済みなし）'
+      : 'Comparison base: none (no saved result)';
   }
 
   async confirmRerunDialog(mode='careful'){
-    const modeLabel = 'ていねい';
-    const title = 'ていねいに再実行の確認';
-    const actionLabel = 'ていねいに再実行する';
+    const modeLabel = this.getPresetLabelFor(mode);
+    const title = this.isJapanese() ? 'ていねいに再実行の確認' : 'Confirm careful rerun';
+    const actionLabel = this.isJapanese() ? 'ていねいに再実行する' : 'Run again carefully';
     return new Promise(resolve=>{
       const ov = this.overlay();
       const modal = Utils.el('div',{style:`width:min(640px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
         Utils.el('div',{text:title,style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
-        Utils.el('div',{text:'この操作は、今出ている抽出結果を保持したまま先頭から再取得します。',style:`font-size:14px;line-height:1.6;color:${THEME.fg};font-weight:700;`}),
-        Utils.el('div',{text:'再取得後に今回結果と前回結果を見比べて選べます。',style:`margin-top:6px;font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
+        Utils.el('div',{text:this.isJapanese() ? 'この操作は、今出ている抽出結果を保持したまま先頭から再取得します。' : 'This keeps the current result and reruns the extraction from the top.',style:`font-size:14px;line-height:1.6;color:${THEME.fg};font-weight:700;`}),
+        Utils.el('div',{text:this.isJapanese() ? '再取得後に今回結果と前回結果を見比べて選べます。' : 'After rerunning, you can compare the new result with the previous one and choose either.',style:`margin-top:6px;font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
       ]);
 
       const body = Utils.el('div',{style:'padding:18px 22px;display:grid;gap:10px;font-size:14px;line-height:1.6;color:'+THEME.fg+';'});
       const attemptLine = this.lastAttemptStatusLabel();
-      const lines = [
-        attemptLine,
-        `再実行モード: ${modeLabel}`,
-        '件数・進捗は0件から再計測',
-        '保存ファイルは残り、中間保存状態は上書きされます'
-      ];
+      const lines = this.isJapanese()
+        ? [
+            attemptLine,
+            `再実行モード: ${modeLabel}`,
+            '件数・進捗は0件から再計測',
+            '保存ファイルは残り、中間保存状態は上書きされます'
+          ]
+        : [
+            attemptLine,
+            `Rerun mode: ${modeLabel}`,
+            'Message counts and progress restart from zero.',
+            'Saved files remain, but the intermediate saved state is overwritten.'
+          ];
       for (const line of lines){
         body.appendChild(Utils.el('div',{text:line,style:'color:'+THEME.fg+';'}));
       }
@@ -2237,7 +2450,7 @@ class App{
         resolve(!!ok);
       };
       const confirmBtn = this.btn(actionLabel,'primary', ()=>done(true));
-      const cancelBtn = this.btn('やめる','subtle', ()=>done(false));
+      const cancelBtn = this.btn(this.isJapanese() ? 'やめる' : 'Cancel','subtle', ()=>done(false));
       const onKeydown=(e)=>{
         if (e.key==='Escape'){
           e.preventDefault();
@@ -2284,79 +2497,124 @@ class App{
   }
 
   buildQualityDetailText(quality){
-    const yn = (v)=>v ? 'はい' : 'いいえ';
-    const lines = [
-      `総合判定: ${quality.status}（${quality.score}点）`,
-      '',
-      `上端まで到達: ${yn(quality.topReached)}`,
-      `上端で安定した回数: ${quality.topStableHits}回`,
-      `上端の実効安定: ${quality.topStableEffectiveHits || quality.topStableHits || 0}回`,
-      `上方向で変化が止まった回数: ${quality.topNoChangeHits || 0}回`,
-      `上方向の早期終了: ${yn(!!quality.topEarlyExit)}`,
-      `追い込み回数: ${quality.topSettleIterations || 0}回`,
-      `追い込み安定: ${quality.topSettleStableHits || 0}回`,
-      `追い込み追加会話: ${quality.topSettleNewMessages || 0}件`,
-      `追い込み統合数: ${quality.topSettleMergedUpdates || 0}件`,
-      '',
-      `下端まで到達: ${yn(quality.bottomReached)}`,
-      `下端で安定した回数: ${quality.bottomStableHits}回`,
-      `下方向で変化が止まった回数: ${quality.bottomNoChangeHits || 0}回`,
-      `下方向の早期終了: ${yn(!!quality.bottomEarlyExit)}`,
-      '',
-      `最終確認で増えた新規メッセージ: ${quality.finalNewMessages}件`,
-      `自動で本文展開した回数: ${quality.expandClicks}回`,
-      `後から内容が伸びて統合した件数: ${quality.mergedUpdates || 0}件`,
-      `話者を判定できなかった件数: ${quality.unknownMessages || 0}件`,
-      `重複判定が弱いメッセージ件数: ${quality.weakIdentityMessages || 0}件`,
-      `順序矛盾の検出数: ${quality.orderGraphCycles || 0}件`
-    ];
+    const lines = this.isJapanese()
+      ? [
+          `総合判定: ${quality.status}（${this.formatPoints(quality.score)}）`,
+          '',
+          `上端まで到達: ${this.yesNo(quality.topReached)}`,
+          `上端で安定した回数: ${this.formatTimes(quality.topStableHits)}`,
+          `上端の実効安定: ${this.formatTimes(quality.topStableEffectiveHits || quality.topStableHits || 0)}`,
+          `上方向で変化が止まった回数: ${this.formatTimes(quality.topNoChangeHits || 0)}`,
+          `上方向の早期終了: ${this.yesNo(!!quality.topEarlyExit)}`,
+          `追い込み回数: ${this.formatTimes(quality.topSettleIterations || 0)}`,
+          `追い込み安定: ${this.formatTimes(quality.topSettleStableHits || 0)}`,
+          `追い込み追加会話: ${this.formatCount(quality.topSettleNewMessages || 0)}`,
+          `追い込み統合数: ${this.formatCount(quality.topSettleMergedUpdates || 0)}`,
+          '',
+          `下端まで到達: ${this.yesNo(quality.bottomReached)}`,
+          `下端で安定した回数: ${this.formatTimes(quality.bottomStableHits)}`,
+          `下方向で変化が止まった回数: ${this.formatTimes(quality.bottomNoChangeHits || 0)}`,
+          `下方向の早期終了: ${this.yesNo(!!quality.bottomEarlyExit)}`,
+          '',
+          `最終確認で増えた新規メッセージ: ${this.formatCount(quality.finalNewMessages)}`,
+          `自動で本文展開した回数: ${this.formatTimes(quality.expandClicks)}`,
+          `後から内容が伸びて統合した件数: ${this.formatCount(quality.mergedUpdates || 0)}`,
+          `話者を判定できなかった件数: ${this.formatCount(quality.unknownMessages || 0)}`,
+          `重複判定が弱いメッセージ件数: ${this.formatCount(quality.weakIdentityMessages || 0)}`,
+          `順序矛盾の検出数: ${this.formatCount(quality.orderGraphCycles || 0)}`
+        ]
+      : [
+          `Overall: ${quality.status} (${this.formatPoints(quality.score)})`,
+          '',
+          `Reached top: ${this.yesNo(quality.topReached)}`,
+          `Top stable hits: ${this.formatTimes(quality.topStableHits)}`,
+          `Effective top stable hits: ${this.formatTimes(quality.topStableEffectiveHits || quality.topStableHits || 0)}`,
+          `Top no-change hits: ${this.formatTimes(quality.topNoChangeHits || 0)}`,
+          `Top early exit: ${this.yesNo(!!quality.topEarlyExit)}`,
+          `Top settle rounds: ${this.formatTimes(quality.topSettleIterations || 0)}`,
+          `Top settle stable hits: ${this.formatTimes(quality.topSettleStableHits || 0)}`,
+          `Top settle new messages: ${this.formatNumber(quality.topSettleNewMessages || 0)}`,
+          `Top settle merged updates: ${this.formatNumber(quality.topSettleMergedUpdates || 0)}`,
+          '',
+          `Reached bottom: ${this.yesNo(quality.bottomReached)}`,
+          `Bottom stable hits: ${this.formatTimes(quality.bottomStableHits)}`,
+          `Bottom no-change hits: ${this.formatTimes(quality.bottomNoChangeHits || 0)}`,
+          `Bottom early exit: ${this.yesNo(!!quality.bottomEarlyExit)}`,
+          '',
+          `Final new messages: ${this.formatNumber(quality.finalNewMessages)}`,
+          `Auto-expands: ${this.formatTimes(quality.expandClicks)}`,
+          `Merged updates: ${this.formatNumber(quality.mergedUpdates || 0)}`,
+          `Unknown speakers: ${this.formatNumber(quality.unknownMessages || 0)}`,
+          `Weak identity messages: ${this.formatNumber(quality.weakIdentityMessages || 0)}`,
+          `Order graph cycles: ${this.formatNumber(quality.orderGraphCycles || 0)}`
+        ];
     return lines.join('\n');
   }
 
   buildQualityUserSummaryLines(quality){
     const lines = [];
-    const overall = quality.status==='PASS'
-      ? '保存してよさそうです。'
-      : quality.status==='WARN'
-        ? '保存はできますが、気になる場合は再実行をおすすめします。'
-        : '再実行してから保存したほうが安全です。';
-    lines.push(`見立て: ${overall}`);
+    const overall = this.isJapanese()
+      ? (quality.status==='PASS'
+          ? '保存してよさそうです。'
+          : quality.status==='WARN'
+            ? '保存はできますが、気になる場合は再実行をおすすめします。'
+            : '再実行してから保存したほうが安全です。')
+      : (quality.status==='PASS'
+          ? 'This looks safe to save.'
+          : quality.status==='WARN'
+            ? 'You can save it, but rerunning is worth considering.'
+            : 'Rerun before saving.');
+    lines.push(this.isJapanese() ? `見立て: ${overall}` : `Summary: ${overall}`);
 
     if (quality.topReached){
-      lines.push('上側: 先頭まで確認済み。');
+      lines.push(this.isJapanese() ? '上側: 先頭まで確認済み。' : 'Top: confirmed to the beginning.');
     } else if (quality.topEarlyExit){
-      lines.push('上側: 途中で変化が止まり終了。');
+      lines.push(this.isJapanese() ? '上側: 途中で変化が止まり終了。' : 'Top: stopped after no more changes were detected.');
     } else {
-      lines.push('上側: 先頭到達は未確定。');
+      lines.push(this.isJapanese() ? '上側: 先頭到達は未確定。' : 'Top: reaching the start is not confirmed.');
     }
     if ((quality.topSettleIterations || 0) > 0){
-      lines.push(`先頭追い込み回数: ${quality.topSettleIterations}回`);
+      lines.push(this.isJapanese()
+        ? `先頭追い込み回数: ${this.formatTimes(quality.topSettleIterations)}`
+        : `Top settle rounds: ${this.formatTimes(quality.topSettleIterations)}`);
     }
     if ((quality.topSettleNewMessages || 0) > 0){
-      lines.push(`追い込み追加会話: ${quality.topSettleNewMessages}件`);
+      lines.push(this.isJapanese()
+        ? `追い込み追加会話: ${this.formatCount(quality.topSettleNewMessages)}`
+        : `New messages added during top settle: ${this.formatNumber(quality.topSettleNewMessages)}`);
     }
 
     if (quality.bottomReached){
-      lines.push('下側: 末尾まで確認済み。');
+      lines.push(this.isJapanese() ? '下側: 末尾まで確認済み。' : 'Bottom: confirmed to the end.');
     } else if (quality.bottomEarlyExit){
-      lines.push('下側: 途中で変化が止まり終了。');
+      lines.push(this.isJapanese() ? '下側: 途中で変化が止まり終了。' : 'Bottom: stopped after no more changes were detected.');
     } else {
-      lines.push('下側: 末尾到達は未確定。');
+      lines.push(this.isJapanese() ? '下側: 末尾到達は未確定。' : 'Bottom: reaching the end is not confirmed.');
     }
 
-    lines.push(`最終追加会話: ${quality.finalNewMessages}件`);
+    lines.push(this.isJapanese()
+      ? `最終追加会話: ${this.formatCount(quality.finalNewMessages)}`
+      : `Final new messages: ${this.formatNumber(quality.finalNewMessages)}`);
 
     if ((quality.expandClicks || 0) > 0){
-      lines.push(`自動で本文を広げた回数: ${quality.expandClicks}回`);
+      lines.push(this.isJapanese()
+        ? `自動で本文を広げた回数: ${this.formatTimes(quality.expandClicks)}`
+        : `Auto-expands: ${this.formatTimes(quality.expandClicks)}`);
     }
     if ((quality.unknownMessages || 0) > 0){
-      lines.push(`注意: 話者を判定できない会話が ${quality.unknownMessages}件 あります。`);
+      lines.push(this.isJapanese()
+        ? `注意: 話者を判定できない会話が ${this.formatCount(quality.unknownMessages)} あります。`
+        : `Note: ${this.formatNumber(quality.unknownMessages)} messages have unknown speakers.`);
     }
     if ((quality.weakIdentityMessages || 0) > 0 && !quality.identityStable){
-      lines.push(`注意: 重複判定が弱い会話が ${quality.weakIdentityMessages}件 あります。`);
+      lines.push(this.isJapanese()
+        ? `注意: 重複判定が弱い会話が ${this.formatCount(quality.weakIdentityMessages)} あります。`
+        : `Note: ${this.formatNumber(quality.weakIdentityMessages)} messages have weak identity detection.`);
     }
     if ((quality.orderGraphCycles || 0) > 0){
-      lines.push(`注意: 会話順の矛盾候補が ${quality.orderGraphCycles}件 あります。`);
+      lines.push(this.isJapanese()
+        ? `注意: 会話順の矛盾候補が ${this.formatCount(quality.orderGraphCycles)} あります。`
+        : `Note: ${this.formatNumber(quality.orderGraphCycles)} possible ordering inconsistencies were detected.`);
     }
     return lines;
   }
@@ -2364,14 +2622,18 @@ class App{
   buildOutputPreviewText(output, maxChars=1200){
     const normalized = String(output || '').trim();
     if (!normalized){
-      return {title:'保存内容プレビュー', text:'(空)'};
+      return {title:this.isJapanese() ? '保存内容プレビュー' : 'Saved content preview', text:this.isJapanese() ? '(空)' : '(empty)'};
     }
     if (normalized.length <= maxChars){
-      return {title:'保存内容プレビュー', text:normalized};
+      return {title:this.isJapanese() ? '保存内容プレビュー' : 'Saved content preview', text:normalized};
     }
     return {
-      title:`保存内容プレビュー（先頭${maxChars.toLocaleString('ja-JP')}文字）`,
-      text:`${normalized.slice(0, maxChars).trimEnd()}\n\n…（以下省略）`
+      title:this.isJapanese()
+        ? `保存内容プレビュー（先頭${maxChars.toLocaleString(this.numberLocale())}文字）`
+        : `Saved content preview (first ${maxChars.toLocaleString(this.numberLocale())} chars)`,
+      text:this.isJapanese()
+        ? `${normalized.slice(0, maxChars).trimEnd()}\n\n…（以下省略）`
+        : `${normalized.slice(0, maxChars).trimEnd()}\n\n... (truncated)`
     };
   }
 
@@ -2383,7 +2645,7 @@ class App{
   formatOutput(messages, quality, diff, preset=this.config.preset){
     const title = this.adapter.getTitle();
     const savedAt = Utils.formatDateJST(new Date());
-    const site = this.adapter.label;
+    const site = this.getSiteLabel();
     const url = location.href;
     const formatId = this.getFormatId();
     const formatDef = this.getFormatDef();
@@ -2407,12 +2669,14 @@ class App{
 
     if (formatId==='txt'){
       if (this.isTxtHeaderEnabled()){
-        out += `${title}\n\n- 形式: ${formatDef.label}\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${messages.length}\n- 品質判定: ${metadata.quality_status} (${metadata.quality_score}点)\n- 警告: ${metadata.warning_text}\n\n================\n\n`;
+        out += this.isJapanese()
+          ? `${title}\n\n- 形式: ${formatDef.label}\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${this.formatNumber(messages.length)}\n- 品質判定: ${metadata.quality_status} (${this.formatPoints(metadata.quality_score)})\n- 警告: ${metadata.warning_text}\n\n================\n\n`
+          : `${title}\n\n- Format: ${formatDef.label}\n- Site: ${site}\n- Saved at: ${savedAt}\n- URL: ${url}\n- Messages: ${this.formatNumber(messages.length)}\n- Quality: ${metadata.quality_status} (${this.formatPoints(metadata.quality_score)})\n- Warning: ${metadata.warning_text}\n\n================\n\n`;
       }
       for (let i=0;i<messages.length;i++){
         const m = messages[i];
         const body = PlainTextFormatter.fromMarkdown(m.content || '');
-        out += `${this.roleLabel(m.role)}:\n${body || '(空)'}\n\n`;
+        out += `${this.roleLabel(m.role)}:\n${body || (this.isJapanese() ? '(空)' : '(empty)')}\n\n`;
         if (i < messages.length-1) out += `----------------\n\n`;
       }
       return {fileName:this.makeFileName(title), output: out.trim()+'\n'};
@@ -2420,9 +2684,15 @@ class App{
 
     if (ENABLE_OBSIDIAN_FORMAT && formatId==='obs'){
       out += yaml;
-      out += `# ${title}\n\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n\n---\n\n`;
+      out += this.isJapanese()
+        ? `# ${title}\n\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n\n---\n\n`
+        : `# ${title}\n\n- Site: ${site}\n- Saved at: ${savedAt}\n- URL: ${url}\n\n---\n\n`;
       for (const m of messages){
-        const callout = (m.role==='User') ? '[!NOTE] あなた' : (m.role==='Model' ? '[!TIP] AI' : '[!INFO] その他');
+        const callout = (m.role==='User')
+          ? `[!NOTE] ${this.roleLabel('User')}`
+          : (m.role==='Model'
+              ? '[!TIP] AI'
+              : `[!INFO] ${this.isJapanese() ? 'その他' : 'Other'}`);
         const body = (m.content||'').replace(/\n/g,'\n> ');
         out += `> ${callout}\n> ${body}\n\n`;
       }
@@ -2432,7 +2702,9 @@ class App{
     // 標準Markdown（YAMLあり）
     out += yaml;
     out += `# ${title}\n\n`;
-    out += `- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${messages.length}\n\n---\n\n`;
+    out += this.isJapanese()
+      ? `- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${this.formatNumber(messages.length)}\n\n---\n\n`
+      : `- Site: ${site}\n- Saved at: ${savedAt}\n- URL: ${url}\n- Messages: ${this.formatNumber(messages.length)}\n\n---\n\n`;
     for (let i=0;i<messages.length;i++){
       const m = messages[i];
       out += `## ${this.roleLabel(m.role)}\n\n${(m.content||'').trim()}\n\n`;
@@ -2460,9 +2732,10 @@ class App{
 
   async showResultDialog(messages, quality, options={}){
     return new Promise(resolve=>{
+      const isJa = this.isJapanese();
       const alternateSnapshot = options?.alternateSnapshot || null;
-      const alternateTitle = options?.alternateTitle || '保持中の結果';
-      const alternateButtonLabel = options?.alternateButtonLabel || '別の結果を見る';
+      const alternateTitle = options?.alternateTitle || (isJa ? '保持中の結果' : 'Saved alternate result');
+      const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '別の結果を見る' : 'View alternate result');
       const resultPreset = options?.preset || this.config.preset;
       const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
@@ -2475,15 +2748,15 @@ class App{
       const modal = Utils.el('div',{style:`width:min(720px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
 
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
-        Utils.el('div',{text:'保存前の確認',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
-        Utils.el('div',{text:`判定: ${summary.label}（${summary.score}点）`,style:`font-size:14px;line-height:1.6;color:${summary.color};font-weight:700;`}),
+        Utils.el('div',{text:isJa ? '保存前の確認' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
+        Utils.el('div',{text:isJa ? `判定: ${summary.label}（${this.formatPoints(summary.score)}）` : `Status: ${summary.label} (${this.formatPoints(summary.score)})`,style:`font-size:14px;line-height:1.6;color:${summary.color};font-weight:700;`}),
         Utils.el('div',{text:summary.hint,style:`margin-top:6px;font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`}),
         summary.diffLine ? Utils.el('div',{text:summary.diffLine,style:`margin-top:6px;font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`}) : null
       ].filter(Boolean));
 
       const body = Utils.el('div',{style:'padding:18px 22px;'});
       const compact = Utils.el('div',{style:'display:grid;gap:6px;padding:12px;border-radius:12px;border:1px solid '+THEME.border+';background:'+THEME.bg+';margin-bottom:12px;font-size:14px;line-height:1.55;font-weight:500;'});
-      let saveState = '未保存';
+      let saveState = isJa ? '未保存' : 'Not saved';
       const renderCompact = () => {
         compact.textContent = '';
         const lines = this.compactSummaryLines(messages, quality, diff, saveState);
@@ -2501,19 +2774,19 @@ class App{
       const grid = Utils.el('div',{style:'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;'});
       const baseLabel = this.comparisonBaseLabel(diff);
       const diffChip = (()=>{
-        if (!diff.previous) return this.chip('前回', 'なし', THEME.muted);
+        if (!diff.previous) return this.chip(isJa ? '前回' : 'Previous', isJa ? 'なし' : 'None', THEME.muted);
         const sign = diff.diff>0?'+':'';
         const ratePct = Math.round((diff.rate||0)*100);
-        const txt = `${sign}${diff.diff}件 (${ratePct}%)`;
+        const txt = isJa ? `${sign}${this.formatCount(diff.diff)} (${ratePct}%)` : `${sign}${this.formatNumber(diff.diff)} (${ratePct}%)`;
         const col = diff.stable ? THEME.ok : (ratePct>=12 ? THEME.bad : THEME.warn);
-        return this.chip('前回比', txt, col);
+        return this.chip(isJa ? '前回比' : 'Delta', txt, col);
       })();
 
       grid.append(
-        this.chip('会話数', `${messages.length}件`),
-        this.chip('比較', baseLabel),
-        this.chip('速度', this.getPresetLabelFor(resultPreset)),
-        this.chip('形式', this.getFormatLabel()),
+        this.chip(isJa ? '会話数' : 'Messages', isJa ? this.formatCount(messages.length) : this.formatNumber(messages.length)),
+        this.chip(isJa ? '比較' : 'Compare', baseLabel),
+        this.chip(isJa ? '速度' : 'Mode', this.getPresetLabelFor(resultPreset)),
+        this.chip(isJa ? '形式' : 'Format', this.getFormatLabel()),
         diffChip
       );
       body.appendChild(grid);
@@ -2540,7 +2813,7 @@ class App{
       // 詳細（品質）
       if (quality){
         const detail = Utils.el('details',{style:`margin-top:12px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-        detail.appendChild(Utils.el('summary',{text:'くわしい判定を見る',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
+        detail.appendChild(Utils.el('summary',{text:isJa ? 'くわしい判定を見る' : 'Show quality details',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
         const detailInner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
         const userSummary = Utils.el('div',{style:'display:grid;gap:6px;'});
         for (const line of this.buildQualityUserSummaryLines(quality)){
@@ -2549,7 +2822,7 @@ class App{
         detailInner.appendChild(userSummary);
 
         const seDetail = Utils.el('details',{style:`border:1px solid ${THEME.border};border-radius:12px;background:${THEME.surface};overflow:hidden;`});
-        seDetail.appendChild(Utils.el('summary',{text:'SE向け詳細を見る',style:`cursor:pointer;list-style:none;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.5;color:${THEME.muted};`}));
+        seDetail.appendChild(Utils.el('summary',{text:isJa ? 'SE向け詳細を見る' : 'Show technical details',style:`cursor:pointer;list-style:none;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.5;color:${THEME.muted};`}));
         seDetail.appendChild(Utils.el('pre',{text:this.buildQualityDetailText(quality),style:`margin:0;padding:12px;border-top:1px solid ${THEME.border};white-space:pre-wrap;word-break:break-word;font:12px/1.6 ${THEME.mono};color:${THEME.muted};`}));
         detailInner.appendChild(seDetail);
 
@@ -2559,14 +2832,14 @@ class App{
 
       // 保存予定ファイル名
       const fileBox = Utils.el('div',{style:`margin-top:12px;padding:12px 14px;border-radius:14px;border:1px solid ${THEME.border};background:${THEME.bg};display:grid;gap:10px;`});
-      fileBox.appendChild(Utils.el('div',{text:'保存されるファイル名',style:`font-size:14px;line-height:1.55;color:${THEME.muted};font-weight:700;`}));
+      fileBox.appendChild(Utils.el('div',{text:isJa ? '保存されるファイル名' : 'Output file name',style:`font-size:14px;line-height:1.55;color:${THEME.muted};font-weight:700;`}));
       const fileInput = Utils.el('input',{
         type:'text',
         value:fileName,
         spellcheck:'false',
         style:`width:100%;border-radius:12px;border:1px solid ${THEME.border};background:${THEME.surface};color:${THEME.fg};padding:10px 12px;font:600 14px/1.5 ${THEME.font};`
       });
-      const fileHint = Utils.el('div',{text:`出力サイズ: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString('ja-JP')} bytes)`,style:`font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`});
+      const fileHint = Utils.el('div',{text:isJa ? `出力サイズ: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)` : `Output size: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)`,style:`font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`});
       fileInput.addEventListener('input', ()=>{
         currentFileName = this.normalizeDownloadFileName(fileInput.value, fileName);
       });
@@ -2579,21 +2852,21 @@ class App{
 
       // 手動コピー欄
       const manual = Utils.el('details',{style:`margin-top:12px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-      manual.appendChild(Utils.el('summary',{text:'手動コピー欄（コピーできない時用）',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
+      manual.appendChild(Utils.el('summary',{text:isJa ? '手動コピー欄（コピーできない時用）' : 'Manual copy',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
       const manInner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
       const ta = Utils.el('textarea',{style:`width:100%;min-height:180px;border-radius:12px;border:1px solid ${THEME.border};background:${THEME.surface};color:${THEME.fg};padding:10px 12px;font:500 14px/1.65 ${THEME.mono};`, spellcheck:'false'});
       ta.value = output;
       const manBtns = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;'});
       const selectAll = ()=>{ ta.focus(); ta.select(); try{ ta.setSelectionRange(0, ta.value.length);}catch{} };
       manBtns.append(
-        this.btn('全選択','secondary', ()=>{ selectAll(); Utils.toast('全選択しました。Ctrl/Cmd+Cでコピーできます。','info'); }),
-        this.btn('コピー（可能なら）','secondary', async ()=>{
+        this.btn(isJa ? '全選択' : 'Select all','secondary', ()=>{ selectAll(); Utils.toast(isJa ? '全選択しました。Ctrl/Cmd+Cでコピーできます。' : 'Selected all. Press Ctrl/Cmd+C to copy.', 'info'); }),
+        this.btn(isJa ? 'コピー（可能なら）' : 'Copy from this area','secondary', async ()=>{
           selectAll();
           try{
             await navigator.clipboard.writeText(ta.value);
-            Utils.toast('クリップボードにコピーしました。','success');
+            Utils.toast(isJa ? 'クリップボードにコピーしました。' : 'Copied to the clipboard.', 'success');
           }catch{
-            Utils.toast('コピーできませんでした。全選択済みなので手動でコピーしてください。','warn', 3500);
+            Utils.toast(isJa ? 'コピーできませんでした。全選択済みなので手動でコピーしてください。' : 'Copy failed. The text is selected, so copy it manually.', 'warn', 3500);
           }
         })
       );
@@ -2609,41 +2882,41 @@ class App{
       };
 
       const finalizeWithState = async (action, state, nextStateMs=220) => {
-        setSaveState(state || '保存状態更新中');
+        setSaveState(state || (isJa ? '保存状態更新中' : 'Updating save state'));
         await Utils.sleep(nextStateMs);
         finish(action);
       };
 
       const footerButtons = [
-        this.btn('中止','subtle', ()=>finish({action:'cancel'})),
+        this.btn(isJa ? '中止' : 'Cancel','subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn('ていねいに再実行','secondary', async ()=>{
+        this.btn(isJa ? 'ていねいに再実行' : 'Rerun carefully','secondary', async ()=>{
           const ok = await this.confirmRerunDialog('careful');
           if (ok) finish({action:'rerun_careful'});
         }),
-        this.btn('クリップボードにコピー','secondary', async ()=>{
+        this.btn(isJa ? 'クリップボードにコピー' : 'Copy to clipboard','secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast('クリップボードにコピーしました。','success');
-            await finalizeWithState({action:'done_clipboard', saveState:'clipboard'}, 'クリップボード保存済み');
+            Utils.toast(isJa ? 'クリップボードにコピーしました。' : 'Copied to the clipboard.', 'success');
+            await finalizeWithState({action:'done_clipboard', saveState:'clipboard'}, isJa ? 'クリップボード保存済み' : 'Saved to clipboard');
           }catch{
-            Utils.toast('コピーできなかったため、ファイル保存に切り替えます。','warn', 3200);
+            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : 'Clipboard copy failed, switching to file save.', 'warn', 3200);
             const ok = this.downloadFile(currentFileName, output);
             if (ok){
-              await finalizeWithState({action:'done_file', saveState:'file'}, 'ファイル保存済み');
+              await finalizeWithState({action:'done_file', saveState:'file'}, isJa ? 'ファイル保存済み' : 'Saved as file');
             }else{
-              setSaveState('コピー/保存に失敗');
-              Utils.toast('保存に失敗しました。', 'error', 2200);
+              setSaveState(isJa ? 'コピー/保存に失敗' : 'Copy/save failed');
+              Utils.toast(isJa ? '保存に失敗しました。' : 'Save failed.', 'error', 2200);
               finish({action:'done_fail', saveState:'failed'});
             }
           }
         }),
-        this.btn('保存（ファイル）','primary', ()=>{
+        this.btn(isJa ? '保存（ファイル）' : 'Save file','primary', ()=>{
           const ok = this.downloadFile(currentFileName, output);
           if (ok){
-            finalizeWithState({action:'done_file', saveState:'file'}, 'ファイル保存済み');
+            finalizeWithState({action:'done_file', saveState:'file'}, isJa ? 'ファイル保存済み' : 'Saved as file');
           }else{
-            setSaveState('保存失敗');
+            setSaveState(isJa ? '保存失敗' : 'Save failed');
             finish({action:'done_fail', saveState:'failed'});
           }
         })
@@ -2662,7 +2935,7 @@ class App{
 
     const effectiveConfig = this.configForRun(presetOverride);
     const effectivePreset = effectiveConfig.preset || this.config.preset;
-    this.abortState = {aborted:false};
+    this.abortState = {aborted:false, lang: effectiveConfig.lang};
     const attemptId = this.markRunAttemptStart(effectivePreset);
     this.showBusyDialog();
     let res=null;
@@ -2682,12 +2955,12 @@ class App{
         reason: 'no_messages'
       });
       if (this.pendingRerunSnapshot){
-        Utils.toast('再取得に失敗したため、保持していた前回結果を再表示します。', 'warn', 4200);
+        Utils.toast(this.isJapanese() ? '再取得に失敗したため、保持していた前回結果を再表示します。' : 'Rerun failed, so the previously kept result will be shown again.', 'warn', 4200);
         const fallback = await this.resolveResultDialogChoice(this.pendingRerunSnapshot, null);
         this.handleRunDialogResult(fallback.result, fallback.snapshot, attemptId);
         return fallback.result;
       }
-      Utils.toast('会話を見つけられませんでした。ページ表示が変わったか、未対応の可能性があります。', 'error', 4200);
+      Utils.toast(this.isJapanese() ? '会話を見つけられませんでした。ページ表示が変わったか、未対応の可能性があります。' : 'No messages were found. The page may have changed or the site may not be supported yet.', 'error', 4200);
       return {action:'cancel'};
     }
 
@@ -2713,10 +2986,10 @@ class App{
     }catch(err){
       console.error('[AI Chat Export]', err);
       const msg = String(err?.message||err||'');
-      if (msg.includes('中断しました')){
-        Utils.toast('中断しました。','warn', 3200);
+      if (msg.includes('中断しました') || msg.includes('Aborted')){
+        Utils.toast(this.isJapanese() ? '中断しました。' : 'Aborted.','warn', 3200);
       } else {
-        Utils.toast(`失敗しました: ${msg}`, 'error', 4200);
+        Utils.toast(this.isJapanese() ? `失敗しました: ${msg}` : `Failed: ${msg}`, 'error', 4200);
       }
     } finally {
 window.__AI_CHAT_EXPORT_RUNNING__ = false;
