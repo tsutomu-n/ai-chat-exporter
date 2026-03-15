@@ -392,16 +392,7 @@ unifiedFirefox = replaceRegex(
       const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
       const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
       body.appendChild(Utils.el('div',{text:this.compactDialogText('title'),style:'font-size:20px;line-height:1.35;font-weight:700;'}));
-      const lines = [
-        isJa ? \`判定: \${summary.label}（\${summary.score}点）\` : isZh ? \`状态: \${summary.label}（\${summary.score}分）\` : \`Status: \${summary.label} (\${summary.score} pts)\`,
-        summary.hint,
-        summary.diffLine || this.comparisonBaseLabel(diff),
-        isJa
-          ? \`件数: \${messages.length}件 / 速度: \${this.getPresetLabelFor(resultPreset)} / 形式: \${this.getFormatLabel()}\`
-          : isZh
-          ? \`消息: \${messages.length} / 模式: \${this.getPresetLabelFor(resultPreset)} / 格式: \${this.getFormatLabel()}\`
-          : \`Messages: \${messages.length} / Mode: \${this.getPresetLabelFor(resultPreset)} / Format: \${this.getFormatLabel()}\`
-      ];
+      const lines = this.compactResultDialogLines(messages, summary, diff, resultPreset);
       for (const line of lines){
         body.appendChild(Utils.el('div',{text:line,style:\`font-size:14px;line-height:1.6;color:\${THEME.fg};font-weight:500;\`}));
       }

@@ -2333,6 +2333,23 @@ class App{
     return table[key] || '';
   }
 
+  compactResultDialogLines(messages, summary, diff, resultPreset){
+    return [
+      this.isJapanese()
+        ? `判定: ${summary.label}（${this.formatPoints(summary.score)}）`
+        : this.isChinese()
+        ? `状态: ${summary.label}（${this.formatPoints(summary.score)}）`
+        : `Status: ${summary.label} (${this.formatPoints(summary.score)})`,
+      summary.hint,
+      summary.diffLine || this.comparisonBaseLabel(diff),
+      this.isJapanese()
+        ? `件数: ${messages.length}件 / 速度: ${this.getPresetLabelFor(resultPreset)} / 形式: ${this.getFormatLabel()}`
+        : this.isChinese()
+        ? `消息: ${messages.length} / 模式: ${this.getPresetLabelFor(resultPreset)} / 格式: ${this.getFormatLabel()}`
+        : `Messages: ${messages.length} / Mode: ${this.getPresetLabelFor(resultPreset)} / Format: ${this.getFormatLabel()}`
+    ];
+  }
+
   qualitySummary(quality, diff){
     // qualityが無いケースもある
     const q = quality || {status:'WARN', score:0};

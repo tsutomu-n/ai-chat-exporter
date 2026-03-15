@@ -252,10 +252,10 @@ describe("repository layout", () => {
     expect(/[^\x00-\x7F]/.test(unified)).toBe(false);
     expect(unified).toContain(".filter(Boolean)");
     expect(unified).toContain("Export AI chat");
-    expect(unified).toContain("Review before saving");
-    expect(unified).toContain("Copy to clipboard");
+    expect(unified).toContain("compactDialogText(\"title\")");
+    expect(unified).toContain("compactDialogText(\"copy\")");
+    expect(unified).toContain("compactDialogText(\"copy_failed_save\")");
     expect(unified).toContain("Comparison base:");
-    expect(unified).toContain("Clipboard copy failed, switching to file save.");
   });
 
   test("keeps zh locale scoped inside the compact busy dialog replacement", () => {
