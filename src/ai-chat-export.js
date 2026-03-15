@@ -608,10 +608,16 @@ class AIStudioAdapter extends BaseAdapter{
 class GrokAdapter extends BaseAdapter{
   constructor(){ super(); this.id='grok'; this.label='Grok'; }
   matches(){
-    const host=location.hostname.toLowerCase();
-    const path=location.pathname.toLowerCase();
+    const href = String(location.href || '');
+    let host = String(location.hostname || '').toLowerCase();
+    let path = String(location.pathname || '').toLowerCase();
+    try{
+      const parsed = new URL(href || `${location.origin || ''}${location.pathname || ''}${location.search || ''}`);
+      host = parsed.hostname.toLowerCase();
+      path = parsed.pathname.toLowerCase();
+    }catch{}
     if (host.includes('grok')) return true;
-    if ((host==='x.com'||host.endsWith('.x.com')||host==='twitter.com'||host.endsWith('.twitter.com')) && path.startsWith('/i/grok')) return true;
+    if ((host==='x.com'||host.endsWith('.x.com')||host==='twitter.com'||host.endsWith('.twitter.com')) && /^\/i\/grok(?:\/|$)/.test(path)) return true;
     return false;
   }
   getConversationKey(){
@@ -623,6 +629,9 @@ class GrokAdapter extends BaseAdapter{
   }
   getPreferredScrollContainerSelectors(){
     return ['main', 'div[role="main"]', 'section', 'body'];
+  }
+  getQualityPolicy(){
+    return {penalizeWeakIdentity:false};
   }
   extractMessages(){
     // GrokのDOMは変わりがちなので広めに拾う
@@ -639,14 +648,120 @@ class GrokAdapter extends BaseAdapter{
     const containers = Array.from(document.querySelectorAll('div[id^="response-"]'));
     if (containers.length){
       return containers.map(el=>{
-        const className = (el.className || '').toLowerCase();
-        const role = (className.includes('items-end') || className.includes('justify-end')) ? 'User' : 'Model';
+        const role = this.inferRole(el);
         const contentNode = el.querySelector('.message-bubble') || el;
         const content = MarkdownParser.extract(contentNode);
         return {role, content, sig:this.nodeSig(el)};
       }).filter(m=>m.content && m.content.length>0);
     }
+    const actionAnchoredTurns = this.extractActionAnchoredTurns();
+    if (actionAnchoredTurns.length) return actionAnchoredTurns;
+    const xConversationNodes = Array.from(document.querySelectorAll(
+      'main article, main [data-testid^="conversation-turn-"], main [data-testid*="grok"], main section'
+    ));
+    if (xConversationNodes.length){
+      return xConversationNodes.map(el=>{
+        const role = this.inferRole(el);
+        const contentNode = el.querySelector('.message-bubble') || el;
+        const content = MarkdownParser.extract(contentNode);
+        return {role, content, sig:this.nodeSig(el)};
+      }).filter(m=>m.content && m.content.length>0 && m.role!=='Unknown');
+    }
     return [];
+  }
+  extractActionAnchoredTurns(){
+    const controls = Array.from(document.querySelectorAll('button[aria-label="Copy text"], button[aria-label="Regenerate"]'));
+    if (!controls.length) return [];
+    const out = [];
+    const seen = new Set();
+    for (const control of controls){
+      const turnRoot = this.findTurnRootFromControl(control);
+      if (!turnRoot) continue;
+      const pair = this.extractTurnPairFromRoot(turnRoot);
+      for (const message of pair){
+        if (!message || !message.content) continue;
+        if (seen.has(message.sig)) continue;
+        seen.add(message.sig);
+        out.push(message);
+      }
+    }
+    return out;
+  }
+  findTurnRootFromControl(control){
+    let node = control?.parentElement || null;
+    while (node && node!==document.body){
+      const parent = node.parentElement || null;
+      if (!parent){
+        node = node.parentElement || null;
+        continue;
+      }
+      const siblings = Array.from(parent.children || []);
+      const idx = siblings.indexOf(node);
+      if (idx>0){
+        const textfulBefore = siblings.slice(0, idx).filter(el=>this.extractPlainText(el).length>0);
+        if (textfulBefore.length>=2) return parent;
+      }
+      node = parent;
+    }
+    return null;
+  }
+  extractTurnPairFromRoot(root){
+    const children = Array.from(root?.children || []);
+    if (!children.length) return [];
+    const actionIndex = children.findIndex(el=>this.hasTurnActionButtons(el));
+    if (actionIndex<=0) return [];
+    const candidates = children
+      .slice(0, actionIndex)
+      .map((el, index)=>({el, index, text:this.extractPlainText(el)}))
+      .filter(row=>row.text.length>0);
+    if (candidates.length<2) return [];
+
+    const modelCandidate = candidates.reduce((best, row)=>{
+      if (!best) return row;
+      return row.text.length>best.text.length ? row : best;
+    }, null);
+    if (!modelCandidate) return [];
+
+    const userCandidate = candidates
+      .slice(0, candidates.findIndex(row=>row===modelCandidate))
+      .reverse()
+      .find(row=>row.text.length>0) || null;
+
+    const out = [];
+    if (userCandidate){
+      out.push({
+        role:'User',
+        content:userCandidate.text,
+        sig:this.nodeSig(userCandidate.el)
+      });
+    }
+    out.push({
+      role:'Model',
+      content:modelCandidate.text,
+      sig:this.nodeSig(modelCandidate.el)
+    });
+    return out;
+  }
+  hasTurnActionButtons(root){
+    return !!(root?.querySelector?.('button[aria-label="Copy text"]') || root?.querySelector?.('button[aria-label="Regenerate"]'));
+  }
+  extractPlainText(root){
+    return MarkdownParser.extract(root).replace(/\s+/g,' ').trim();
+  }
+  inferRole(el){
+    const author = (el.getAttribute?.('data-message-author-role') || el.dataset?.messageAuthorRole || '').toLowerCase();
+    if (author === 'user' || author === 'human') return 'User';
+    if (author === 'assistant' || author === 'model' || author === 'grok') return 'Model';
+
+    const testId = (el.getAttribute?.('data-testid') || '').toLowerCase();
+    if (testId.includes('user') || testId.includes('human')) return 'User';
+    if (testId.includes('assistant') || testId.includes('model')) return 'Model';
+
+    const className = String(el.className || '').toLowerCase();
+    if (className.includes('items-end') || className.includes('justify-end')) return 'User';
+    if (className.includes('items-start') || className.includes('justify-start')) return 'Model';
+
+    return 'Unknown';
   }
   nodeSig(el){
     const stableId = el.getAttribute('data-id') || el.id || '';
