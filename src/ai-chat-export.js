@@ -1191,8 +1191,12 @@ class ScrollEngine{
       weakOrdinalMap.set(weakBase, ordinal);
       return {key:`weak:${weakBase}#${ordinal}`, weak:true, sig:sigInfo.sig || weakBase};
     };
-    const findPromotableWeakKey = (next)=>{
+    const findPromotableWeakKey = (next, usedKeys)=>{
+      let bestKey = null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      let bestCapture = -1;
       for (const [existingKey, record] of messageMap.entries()){
+        if (usedKeys?.has(existingKey)) continue;
         if (!record.weakIdentity) continue;
         if (record.role !== next.role) continue;
         const currentContent = String(record.content || '').trim();
@@ -1200,10 +1204,16 @@ class ScrollEngine{
         if (!currentContent || !nextContent) continue;
         const sameContent = currentContent === nextContent || currentContent.includes(nextContent) || nextContent.includes(currentContent);
         if (!sameContent) continue;
-        if (Math.abs((record.lastSeenDomIndex ?? next.domIndex) - next.domIndex) > 3) continue;
-        return existingKey;
+        const distance = Math.abs((record.lastSeenDomIndex ?? next.domIndex) - next.domIndex);
+        if (distance > 3) continue;
+        const captureRank = record.lastSeenCapture ?? 0;
+        if (distance < bestDistance || (distance === bestDistance && captureRank > bestCapture)){
+          bestKey = existingKey;
+          bestDistance = distance;
+          bestCapture = captureRank;
+        }
       }
-      return null;
+      return bestKey;
     };
     const mergeRecord = (record, next)=>{
       const nextContent = String(next.content || '').trim();
@@ -1270,6 +1280,7 @@ class ScrollEngine{
       stats.captures++;
       const msgs = adapter.extractMessages();
       const visibleKeys = [];
+      const usedKeys = new Set();
       const weakOrdinalMap = new Map();
       for (let i=0;i<msgs.length;i++){
         const m=msgs[i];
@@ -1283,17 +1294,22 @@ class ScrollEngine{
           sig
         };
         let resolvedKey = key;
-        if (!weak){
-          const promoteFrom = findPromotableWeakKey(next);
-          if (promoteFrom && promoteFrom !== resolvedKey && !messageMap.has(resolvedKey)){
+        if (!messageMap.has(resolvedKey)){
+          const promoteFrom = findPromotableWeakKey(next, usedKeys);
+          if (promoteFrom && promoteFrom !== resolvedKey){
             const promoted = messageMap.get(promoteFrom);
-            promoted.weakIdentity = false;
-            promoted.sig = next.sig;
-            messageMap.delete(promoteFrom);
-            messageMap.set(resolvedKey, promoted);
+            if (promoted){
+              if (!weak){
+                promoted.weakIdentity = false;
+                promoted.sig = next.sig;
+              }
+              messageMap.delete(promoteFrom);
+              messageMap.set(resolvedKey, promoted);
+            }
           }
         }
         visibleKeys.push(resolvedKey);
+        usedKeys.add(resolvedKey);
         if (!messageMap.has(resolvedKey)){
           messageMap.set(resolvedKey, {
             role: next.role,
