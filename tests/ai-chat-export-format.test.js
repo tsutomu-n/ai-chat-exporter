@@ -1012,6 +1012,23 @@ describe("ai-chat export formats", () => {
     expect(app.compactDialogText("copy_save_failed")).toBe("复制和保存都失败。");
   });
 
+  test("provides compact result summary lines for lightweight dialogs", () => {
+    const { app } = loadApp({ navigatorLanguage: "en-US" });
+    const lines = app.compactResultDialogLines(
+      [{ role: "User", content: "one" }, { role: "Model", content: "two" }],
+      { label: "Review", score: 75, hint: "Rerun if needed.", diffLine: "Previous: 1 / Current: 2 (delta +1)" },
+      { previous: { count: 1 }, diff: 1, comparisonKind: "snapshot", previousLabel: "Previous result" },
+      "careful",
+    );
+
+    expect(lines).toEqual([
+      "Status: Review (75 pts)",
+      "Rerun if needed.",
+      "Previous: 1 / Current: 2 (delta +1)",
+      "Messages: 2 / Mode: Careful / Format: Markdown",
+    ]);
+  });
+
   test("reruns carefully without persisting the preset change", async () => {
     const { app } = loadApp({
       storedConfig: {

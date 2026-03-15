@@ -282,6 +282,7 @@ describe("repository layout", () => {
     expect(generator).toContain("this.compactDialogText('copied')");
     expect(generator).toContain("this.compactDialogText('manual_copy_prompt')");
     expect(generator).toContain("this.compactDialogText('copy_save_failed')");
+    expect(generator).toContain("const lines = this.compactResultDialogLines(messages, summary, diff, resultPreset);");
     expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
     expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
     expect(generator).toContain("const count = diff?.previous?.count;");
