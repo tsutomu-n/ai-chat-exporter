@@ -78,10 +78,6 @@ minimal = replaceRegex(
   minimal,
   /\n\s*languageDescription\(lang\)\{[\s\S]*?\n\s*storageKeys\(\)\{/,
   `
-  languageDescription(lang){
-    return this.isJapanese()?(normalizeLangId(lang)==='ja'?'日本語UI':'英語UI'):(normalizeLangId(lang)==='zh-CN'?'中文 UI':'English UI');
-  }
-
   storageKeys(){`,
   'minimal languageDescription',
 );
@@ -89,18 +85,6 @@ minimal = replaceRegex(
   minimal,
   /\n\s*formatTimes\(value\)\{[\s\S]*?\n\s*getSiteLabel\(\)\{/,
   `
-  formatTimes(value){
-    return this.isJapanese()?this.formatNumber(value)+'回':this.isChinese()?this.formatNumber(value)+'次':this.formatNumber(value)+' times';
-  }
-
-  formatPoints(value){
-    return this.isJapanese()?this.formatNumber(value)+'点':this.isChinese()?this.formatNumber(value)+'分':this.formatNumber(value)+' pts';
-  }
-
-  yesNo(value){
-    return this.isJapanese()?(value?'はい':'いいえ'):this.isChinese()?(value?'是':'否'):(value?'Yes':'No');
-  }
-
   getSiteLabel(){`,
   'minimal format helpers',
 );
@@ -471,6 +455,59 @@ unifiedFirefox = replaceRegex(
 
   async runOnce({skipConfig=false, presetOverride=null}={}){`,
   'unified Firefox compact result dialog',
+);
+unifiedFirefox = replaceRegex(
+  unifiedFirefox,
+  /\n\s*formatOutput\(messages, quality, diff, preset=this\.config\.preset\)\{[\s\S]*?\n\s*downloadFile\(fileName, content\)\{/,
+  `
+  formatOutput(messages, quality, diff, preset=this.config.preset){
+    const title = this.adapter.getTitle();
+    const savedAt = Utils.formatDateJST(new Date());
+    const site = this.getSiteLabel();
+    const url = location.href;
+    const fmt = this.getFormatDef();
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
+    const warning = this.warningSummary({quality, diff}).text;
+    let out = '';
+    if (this.getFormatId()==='txt'){
+      if (this.isTxtHeaderEnabled()){
+        out += this.isJapanese()
+          ? \`\${title}\\n\\n- 形式: \${fmt.label}\\n- サイト: \${site}\\n- 保存日時: \${savedAt}\\n- URL: \${url}\\n- 会話数: \${messages.length}\\n- 警告: \${warning}\\n\\n================\\n\\n\`
+          : zh
+          ? \`\${title}\\n\\n- 格式: \${fmt.label}\\n- 站点: \${site}\\n- 保存时间: \${savedAt}\\n- URL: \${url}\\n- 消息数: \${messages.length}\\n- 警告: \${warning}\\n\\n================\\n\\n\`
+          : \`\${title}\\n\\n- Format: \${fmt.label}\\n- Site: \${site}\\n- Saved at: \${savedAt}\\n- URL: \${url}\\n- Messages: \${messages.length}\\n- Warning: \${warning}\\n\\n================\\n\\n\`;
+      }
+      for (let i=0;i<messages.length;i++){
+        const m = messages[i];
+        const body = PlainTextFormatter.fromMarkdown(m.content || '');
+        out += \`\${this.roleLabel(m.role)}:\\n\${body || (this.isJapanese() ? '(空)' : zh ? '(空)' : '(empty)')}\\n\\n\`;
+        if (i < messages.length-1) out += \`----------------\\n\\n\`;
+      }
+      return {fileName:this.makeFileName(title), output: out.trim()+'\\n'};
+    }
+    out += \`# \${title}\\n\\n\`;
+    out += this.isJapanese()
+      ? \`- サイト: \${site}\\n- 保存日時: \${savedAt}\\n- URL: \${url}\\n- 会話数: \${messages.length}\\n\\n---\\n\\n\`
+      : zh
+      ? \`- 站点: \${site}\\n- 保存时间: \${savedAt}\\n- URL: \${url}\\n- 消息数: \${messages.length}\\n\\n---\\n\\n\`
+      : \`- Site: \${site}\\n- Saved at: \${savedAt}\\n- URL: \${url}\\n- Messages: \${messages.length}\\n\\n---\\n\\n\`;
+    for (let i=0;i<messages.length;i++){
+      const m = messages[i];
+      out += \`## \${this.roleLabel(m.role)}\\n\\n\${(m.content||'').trim()}\\n\\n\`;
+      if (i < messages.length-1) out += \`---\\n\\n\`;
+    }
+    return {fileName:this.makeFileName(title), output: out.trim()+'\\n'};
+  }
+
+  downloadFile(fileName, content){`,
+  'unified Firefox compact formatOutput body',
+);
+unifiedFirefox = replaceRegex(
+  unifiedFirefox,
+  /\n\s*yamlValue\(v\)\{[\s\S]*?\n\s*warningSummary\(\{quality, diff\}\)\{/,
+  `
+  warningSummary({quality, diff}){`,
+  'unified Firefox removes yaml helpers',
 );
 
 fs.writeFileSync(minimalBodyPath, `${minimal}\n`);
