@@ -254,6 +254,14 @@ describe("repository layout", () => {
     expect(unified).toContain("Clipboard copy failed, switching to file save.");
   });
 
+  test("keeps zh locale scoped inside the compact busy dialog replacement", () => {
+    const generator = readRepoFile("scripts", "generate_oneline_bookmarklet.sh");
+
+    expect(generator).toContain("  updateBusyDialog(p){");
+    expect(generator).toContain("    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';");
+    expect(generator).toContain("stage==='final' ? (ja?'最終確認中':zh?'正在做最后检查':'Final checks')");
+  });
+
   test("keeps only the curated README screenshots under stable names", () => {
     expect(existsSync(rootPath("assets", "01-bookmark-setup.png"))).toBe(true);
     expect(existsSync(rootPath("assets", "02-config-dialog.png"))).toBe(true);

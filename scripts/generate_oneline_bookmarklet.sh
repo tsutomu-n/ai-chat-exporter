@@ -239,6 +239,7 @@ minimal = replaceRegex(
     if (!this.busyUI) return;
     const stage = p?.stage || '';
     const ja = this.isJapanese();
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     this.busyUI.title.textContent = stage==='final' ? (ja?'最終確認中':zh?'正在做最后检查':'Final checks') : (ja?'処理中':zh?'处理中':'Working');
     if (p?.message) this.busyUI.desc.textContent = p.message;
   }
