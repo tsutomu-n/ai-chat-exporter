@@ -2463,15 +2463,22 @@ class App{
 
   comparisonBaseLabel(diff){
     if (Number.isFinite(diff?.previous?.count)){
-      const prefix = diff?.comparisonKind === 'snapshot'
-        ? `${diff.previousLabel || (this.isJapanese() ? '前回結果' : 'Previous result')} `
-        : '';
+      if (diff?.comparisonKind === 'snapshot'){
+        const label = diff.previousLabel || this.text('前回結果', 'Previous result', '上一次结果');
+        if (this.isJapanese()) return `比較ベース: ${label}（${this.formatCount(diff.previous.count)}）`;
+        if (this.isChinese()) return `比较基准: ${label}（${this.formatCount(diff.previous.count)}）`;
+        return `Comparison base: ${label} (${this.formatNumber(diff.previous.count)})`;
+      }
       return this.isJapanese()
-        ? `比較ベース: ${prefix}${this.formatCount(diff.previous.count)}`
-        : `Comparison base: ${prefix}${this.formatNumber(diff.previous.count)}`;
+        ? `比較ベース: ${this.formatCount(diff.previous.count)}`
+        : this.isChinese()
+        ? `比较基准: ${this.formatCount(diff.previous.count)}`
+        : `Comparison base: ${this.formatNumber(diff.previous.count)}`;
     }
     return this.isJapanese()
       ? '比較ベース: なし（保存済みなし）'
+      : this.isChinese()
+      ? '比较基准: 无（没有已保存结果）'
       : 'Comparison base: none (no saved result)';
   }
 
@@ -2893,7 +2900,7 @@ class App{
         detailInner.appendChild(userSummary);
 
         const seDetail = Utils.el('details',{style:`border:1px solid ${THEME.border};border-radius:12px;background:${THEME.surface};overflow:hidden;`});
-        seDetail.appendChild(Utils.el('summary',{text:this.text('SE向け詳細を見る', 'Show technical details', '查看技术详情'),style:`cursor:pointer;list-style:none;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.5;color:${THEME.muted};`}));
+        seDetail.appendChild(Utils.el('summary',{text:this.text('技術詳細を見る', 'Show technical details', '查看技术详情'),style:`cursor:pointer;list-style:none;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.5;color:${THEME.muted};`}));
         seDetail.appendChild(Utils.el('pre',{text:this.buildQualityDetailText(quality),style:`margin:0;padding:12px;border-top:1px solid ${THEME.border};white-space:pre-wrap;word-break:break-word;font:12px/1.6 ${THEME.mono};color:${THEME.muted};`}));
         detailInner.appendChild(seDetail);
 

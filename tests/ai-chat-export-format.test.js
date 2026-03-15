@@ -797,14 +797,59 @@ describe("ai-chat export formats", () => {
 
     const text = globalThis.document.body.textContent;
 
-    expect(text).toContain("比較ベース: 前回結果 2件");
+    expect(text).toContain("比較ベース: 前回結果（2件）");
     expect(text).toContain("前回結果: 2件 / 今回: 3件（差分 +1件）");
     expect(text).not.toContain("比較ベース: なし（保存済みなし）");
     expect(text).not.toContain("前回データなし");
+    expect(text).toContain("技術詳細を見る");
+    expect(text).not.toContain("SE向け詳細を見る");
 
     const cancelButton = globalThis.document.body
       .querySelectorAll("button")
       .find((button) => button.textContent === "中止");
+
+    expect(cancelButton).toBeDefined();
+    cancelButton.click();
+
+    await expect(pending).resolves.toEqual({ action: "cancel" });
+  });
+
+  test("formats the english comparison base label clearly for rerun snapshots", async () => {
+    const { app } = loadApp({ navigatorLanguage: "en-US" });
+    setupUiDom();
+
+    const previous = app.createResultSnapshot(
+      [
+        { role: "User", content: "old prompt" },
+        { role: "Model", content: "old answer" },
+      ],
+      { status: "PASS", score: 100 },
+      { preset: "normal" },
+    );
+
+    const pending = app.showResultDialog(
+      [
+        { role: "User", content: "new prompt" },
+        { role: "Model", content: "new answer" },
+        { role: "User", content: "follow up" },
+      ],
+      { status: "WARN", score: 75 },
+      {
+        alternateSnapshot: previous,
+        alternateTitle: "Previous result kept",
+        alternateButtonLabel: "View previous result",
+        preset: "careful",
+      },
+    );
+
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("Comparison base: Previous result (2)");
+    expect(text).not.toContain("Comparison base: Previous result 2");
+
+    const cancelButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "Cancel");
 
     expect(cancelButton).toBeDefined();
     cancelButton.click();
