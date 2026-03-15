@@ -970,6 +970,28 @@ describe("ai-chat export formats", () => {
     await expect(pending).resolves.toEqual({ action: "cancel" });
   });
 
+  test("reuses the same quality wording across summary and warning labels", () => {
+    const { app } = loadApp({ navigatorLanguage: "zh-CN" });
+    const diff = {
+      previous: { count: 2, digest: "old" },
+      now: { count: 5, digest: "new" },
+      diff: 3,
+      rate: 0.6,
+      stable: false,
+      digestSame: false,
+      previousLabel: "上一次结果",
+      comparisonKind: "snapshot",
+    };
+
+    const summary = app.qualitySummary({ status: "WARN", score: 75 }, diff);
+    const warning = app.warningSummary({ quality: { status: "WARN", score: 75 }, diff });
+
+    expect(summary.label).toBe("需要快速检查");
+    expect(summary.hint).toBe("与上一次的差异较大，滚动可能过早停止了。");
+    expect(warning.text).toContain("需要快速检查");
+    expect(warning.text).toContain("与上一次差异较大");
+  });
+
   test("reruns carefully without persisting the preset change", async () => {
     const { app } = loadApp({
       storedConfig: {

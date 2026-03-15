@@ -2270,32 +2270,50 @@ class App{
     this.busyUI=null;
   }
 
-  qualitySummary(quality, diff){
-    // qualityが無いケースもある
-    const q = quality || {status:'WARN', score:0};
-    const label = this.isJapanese()
-      ? (q.status==='PASS'?'良好' : q.status==='WARN'?'やや不安' : '要再実行')
-      : this.isChinese()
-      ? (q.status==='PASS'?'良好' : q.status==='WARN'?'需要快速检查' : '建议重新运行')
-      : (q.status==='PASS'?'Looks good' : q.status==='WARN'?'Needs a quick check' : 'Rerun recommended');
-    const color = q.status==='PASS'?THEME.ok : q.status==='WARN'?THEME.warn : THEME.bad;
+  qualityStatusText(status, compact=false){
+    if (this.isJapanese()){
+      if (status==='PASS') return '良好';
+      if (status==='WARN') return compact ? '注意' : 'やや不安';
+      return compact ? '再実行' : '要再実行';
+    }
+    if (this.isChinese()){
+      if (status==='PASS') return '良好';
+      if (status==='WARN') return '需要快速检查';
+      return '建议重新运行';
+    }
+    if (status==='PASS') return compact ? 'Good' : 'Looks good';
+    if (status==='WARN') return compact ? 'Review' : 'Needs a quick check';
+    return compact ? 'Rerun' : 'Rerun recommended';
+  }
 
-    let hint = '';
-    if (q.status==='PASS') hint = this.isJapanese()
-      ? '概ね問題なさそうです。'
-      : this.isChinese()
-      ? '看起来可以保存。'
-      : 'The result looks stable enough to save.';
-    else if (q.status==='WARN') hint = this.isJapanese()
-      ? '会話が長い場合は、もう一度実行すると安定することがあります。'
-      : this.isChinese()
-      ? '如果聊天很长，重新运行一次可能会更稳定。'
-      : 'If the chat is long, rerunning once may improve stability.';
-    else hint = this.isJapanese()
+  qualityHintText(status){
+    if (status==='PASS'){
+      return this.isJapanese()
+        ? '概ね問題なさそうです。'
+        : this.isChinese()
+        ? '看起来可以保存。'
+        : 'The result looks stable enough to save.';
+    }
+    if (status==='WARN'){
+      return this.isJapanese()
+        ? '会話が長い場合は、もう一度実行すると安定することがあります。'
+        : this.isChinese()
+        ? '如果聊天很长，重新运行一次可能会更稳定。'
+        : 'If the chat is long, rerunning once may improve stability.';
+    }
+    return this.isJapanese()
       ? '取得漏れの可能性が高いです。もう一度実行を推奨します。'
       : this.isChinese()
       ? '可能有内容缺失。建议保存前重新运行。'
       : 'Missing content is likely. Rerun before saving.';
+  }
+
+  qualitySummary(quality, diff){
+    // qualityが無いケースもある
+    const q = quality || {status:'WARN', score:0};
+    const label = this.qualityStatusText(q.status, false);
+    const color = q.status==='PASS'?THEME.ok : q.status==='WARN'?THEME.warn : THEME.bad;
+    let hint = this.qualityHintText(q.status);
 
     if ((q.weakIdentityMessages||0) > 0 && !q.identityStable){
       hint = this.isJapanese()
@@ -2432,11 +2450,7 @@ class App{
       parts.push(this.text('前回データなし', 'no previous data', '没有上一次数据'));
     }
     if (qWarn){
-      parts.push(this.isJapanese()
-        ? (q.status==='WARN' ? 'やや不安' : '要再実行')
-        : this.isChinese()
-        ? (q.status==='WARN' ? '需要快速检查' : '建议重新运行')
-        : (q.status==='WARN' ? 'needs a quick check' : 'rerun recommended'));
+      parts.push(this.qualityStatusText(q.status, false).toLowerCase?.() ? this.qualityStatusText(q.status, false).toLowerCase() : this.qualityStatusText(q.status, false));
     }
     if (diffWarn){
       parts.push(this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大'));
