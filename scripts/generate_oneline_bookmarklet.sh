@@ -391,7 +391,7 @@ unifiedFirefox = replaceRegex(
       const ov = this.overlay();
       const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
       const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
-      body.appendChild(Utils.el('div',{text:isJa ? '保存前の確認' : isZh ? '保存确认' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;'}));
+      body.appendChild(Utils.el('div',{text:this.compactDialogText('title'),style:'font-size:20px;line-height:1.35;font-weight:700;'}));
       const lines = [
         isJa ? \`判定: \${summary.label}（\${summary.score}点）\` : isZh ? \`状态: \${summary.label}（\${summary.score}分）\` : \`Status: \${summary.label} (\${summary.score} pts)\`,
         summary.hint,
@@ -413,31 +413,31 @@ unifiedFirefox = replaceRegex(
       };
 
       const footerButtons = [
-        this.btn(isJa ? '中止' : isZh ? '取消' : 'Cancel','subtle', ()=>finish({action:'cancel'})),
+        this.btn(this.compactDialogText('cancel'),'subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn(isJa ? 'ていねいに再実行' : isZh ? '细致重试' : 'Careful rerun','secondary', async ()=>{
+        this.btn(this.compactDialogText('careful_rerun'),'secondary', async ()=>{
           if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
         }),
-        this.btn(isJa ? 'クリップボードにコピー' : isZh ? '复制' : 'Copy to clipboard','secondary', async ()=>{
+        this.btn(this.compactDialogText('copy'),'secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制。' : 'Copied.','success');
+            Utils.toast(this.compactDialogText('copied'),'success');
             finish({action:'done_clipboard', saveState:'clipboard'});
           }catch{
-            Utils.toast(isJa ? 'コピー失敗のため、ファイル保存に切り替えます。' : isZh ? '复制失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
+            Utils.toast(this.compactDialogText('copy_failed_save'),'warn', 3200);
             const ok = this.downloadFile(fileName, output);
             if (ok){
               finish({action:'done_file', saveState:'file'});
             }else{
               try{
-                window.prompt(isJa ? 'コピー失敗。ここから手動でコピーしてください。' : isZh ? '复制失败。请从这里手动复制。' : 'Copy failed. Copy here.', output);
+                window.prompt(this.compactDialogText('manual_copy_prompt'), output);
               }catch{
-                Utils.toast(isJa ? 'コピーも保存も失敗しました。' : isZh ? '复制和保存都失败。' : 'Copy/save failed.','warn', 3200);
+                Utils.toast(this.compactDialogText('copy_save_failed'),'warn', 3200);
               }
             }
           }
         }),
-        this.btn(isJa ? '保存' : isZh ? '保存' : 'Save file','primary', ()=>{
+        this.btn(this.compactDialogText('save'),'primary', ()=>{
           const ok = this.downloadFile(fileName, output);
           finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
         })
