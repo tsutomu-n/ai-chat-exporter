@@ -344,6 +344,14 @@ describe("ai-chat export formats", () => {
     expect(app.roleLabel("User")).toBe("You");
   });
 
+  test("detects chinese as the initial language when the browser locale is chinese", () => {
+    const { app } = loadApp({ navigatorLanguage: "zh-CN" });
+
+    expect(app.config.lang).toBe("zh-CN");
+    expect(app.getFormatLabel()).toBe("Markdown");
+    expect(app.roleLabel("User")).toBe("你");
+  });
+
   test("uses the selected app language for the fallback conversation title", () => {
     const { app } = loadApp({
       navigatorLanguage: "ja-JP",
@@ -496,6 +504,41 @@ describe("ai-chat export formats", () => {
     await expect(pending).resolves.toBe(true);
   });
 
+  test("shows chinese labels in the config dialog and persists the selected language", async () => {
+    const { app, store } = loadApp({ navigatorLanguage: "zh-CN" });
+    setupUiDom();
+
+    const pending = app.showConfigDialog();
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("导出 AI 对话");
+    expect(text).toContain("语言");
+    expect(text).toContain("运行模式");
+    expect(text).toContain("保存格式");
+    expect(text).toContain("高级设置");
+    expect(text).toContain("中文界面与导出标签");
+    expect(text).toContain("英文界面与导出标签");
+    expect(text).toContain("日文界面与导出标签");
+
+    const englishButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent.includes("English"));
+
+    expect(englishButton).toBeDefined();
+    englishButton.click();
+
+    expect(app.config.lang).toBe("en");
+    expect(JSON.parse(store.get("ai-chat-export:v2_cfg_generic")).lang).toBe("en");
+    expect(globalThis.document.body.textContent).toContain("Export AI chat");
+
+    const startButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "Start");
+    startButton.click();
+
+    await expect(pending).resolves.toBe(true);
+  });
+
   test("shows save formats in the intended button order", async () => {
     const { app } = loadApp();
     setupUiDom();
@@ -559,6 +602,41 @@ describe("ai-chat export formats", () => {
     expect(output).toContain("You:\nSimple body");
     expect(output).not.toContain("- 形式:");
     expect(output).not.toContain("あなた:");
+  });
+
+  test("renders chinese metadata labels in txt output when lang is zh-CN", () => {
+    const { app } = loadApp({
+      navigatorLanguage: "zh-CN",
+      storedConfig: {
+        lang: "zh-CN",
+        fmt: "txt",
+        preset: "normal",
+        scrollMax: 32,
+        scrollDelay: 220,
+        autoExpand: true,
+        expandMaxClicks: 24,
+        expandClickDelay: 130,
+        txtHeader: true,
+      },
+    });
+
+    const { output } = app.formatOutput(
+      [
+        {
+          role: "User",
+          content: "Simple body",
+        },
+      ],
+      { status: "PASS", score: 100 },
+      { previous: null, lastAttempt: null },
+    );
+
+    expect(output).toContain("- 格式: 纯文本");
+    expect(output).toContain("- 站点: 通用");
+    expect(output).toContain("- 消息数: 1");
+    expect(output).toContain("你:\nSimple body");
+    expect(output).not.toContain("- Format:");
+    expect(output).not.toContain("You:");
   });
 
   test("shows only one careful rerun action in the result dialog", async () => {
@@ -761,6 +839,38 @@ describe("ai-chat export formats", () => {
     const cancelButton = globalThis.document.body
       .querySelectorAll("button")
       .find((button) => button.textContent === "Cancel");
+
+    expect(cancelButton).toBeDefined();
+    cancelButton.click();
+
+    await expect(pending).resolves.toEqual({ action: "cancel" });
+  });
+
+  test("shows chinese labels in the result dialog", async () => {
+    const { app } = loadApp({ navigatorLanguage: "zh-CN" });
+    setupUiDom();
+
+    const pending = app.showResultDialog(
+      [
+        { role: "User", content: "prompt" },
+        { role: "Model", content: "answer" },
+      ],
+      { status: "WARN", score: 75 },
+      { preset: "normal" },
+    );
+
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("保存前确认");
+    expect(text).toContain("输出文件名");
+    expect(text).toContain("手动复制");
+    expect(text).toContain("从这里复制");
+    expect(text).toContain("查看质量详情");
+    expect(text).toContain("复制到剪贴板");
+
+    const cancelButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "取消");
 
     expect(cancelButton).toBeDefined();
     cancelButton.click();

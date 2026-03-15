@@ -237,10 +237,12 @@ describe("repository layout", () => {
     const generic = readRepoFile("ai-chat-export.chrome.bookmarklet.oneliner.js");
     const unified = readRepoFile("ai-chat-export.firefox.bookmarklet.oneliner.js");
 
+    expect(generic).toContain("zh-CN");
     expect(unified).toContain("claude.ai");
     expect(unified).toContain("chatgpt.com");
     expect(unified).toContain("aistudio.google.com");
     expect(unified).toContain("x.com");
+    expect(unified).toContain("zh-CN");
     expect(unified.length).toBeLessThan(generic.length);
     expect(unified.length).toBeLessThan(62000);
     expect(/[^\x00-\x7F]/.test(unified)).toBe(false);
