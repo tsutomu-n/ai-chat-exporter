@@ -114,6 +114,7 @@ describe("repository layout", () => {
     expect(readme).toContain("quality check");
     expect(readme).toContain("clipboard");
     expect(readme).toContain("No browser extension is needed");
+    expect(readme).toContain("Japanese, English, or Simplified Chinese");
     expect(readme).toContain("One-file version for Chrome / Chromium");
     expect(readme).toContain("Remembers your mode and format in the browser");
     expect(readme).toContain("The distributed bookmarklets use a compact result screen");
@@ -124,12 +125,14 @@ describe("repository layout", () => {
     expect(readmeJa).toContain("長い AI チャット");
     expect(readmeJa).toContain("品質判定");
     expect(readmeJa).toContain("クリップボード");
+    expect(readmeJa).toContain("日本語 / 英語 / 简体中文");
 
     expect(readmeZh).toContain("# AI 聊天导出");
     expect(readmeZh).toContain("## 这个工具的用途");
     expect(readmeZh).toContain("## 主要功能");
     expect(readmeZh).toContain("质量检查");
     expect(readmeZh).toContain("剪贴板");
+    expect(readmeZh).toContain("日文 / 英文 / 简体中文");
   });
 
   test("ships english and japanese public guides under docs", () => {
@@ -173,6 +176,7 @@ describe("repository layout", () => {
     expect(page).toContain("WARN");
     expect(page).toContain("FAIL");
     expect(page).toContain("clipboard");
+    expect(page).toContain("Japanese, English, or Simplified Chinese");
     expect(page).toContain("This public repo mainly ships these two bookmarklet files.");
     expect(page).toContain("Scrolls more and opens more hidden content.");
     expect(page).toContain("The distributed bookmarklets use a compact result screen");
@@ -184,6 +188,7 @@ describe("repository layout", () => {
     expect(pageJa).toContain("## 出力形式の違い");
     expect(pageJa).toContain("## 品質判定の見方");
     expect(pageJa).toContain("## 保存方法の違い");
+    expect(pageJa).toContain("日本語 / 英語 / 简体中文");
 
     expect(pageZh).toContain("# AI 聊天导出使用指南");
     expect(pageZh).toContain("## 基本用法");
@@ -191,6 +196,7 @@ describe("repository layout", () => {
     expect(pageZh).toContain("## 输出格式");
     expect(pageZh).toContain("## 质量状态");
     expect(pageZh).toContain("## 保存方式");
+    expect(pageZh).toContain("日文 / 英文 / 简体中文");
   });
 
   test("keeps the docs bookmarklet asset synced with the root bookmarklet", () => {

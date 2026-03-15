@@ -25,6 +25,7 @@ This tool is built to collect the conversation as safely as possible and export 
 - Shows a quality check before saving
 - Can save to a file or copy to the clipboard
 - Remembers your mode and format in the browser
+- UI and output labels can be shown in Japanese, English, or Simplified Chinese
 
 ## Recommended files
 
@@ -61,7 +62,7 @@ Even long conversations can be saved as readable Markdown.
 1. Open `ai-chat-export.chrome.bookmarklet.oneliner.js` for Chrome / Chromium or `ai-chat-export.firefox.bookmarklet.oneliner.js` for Firefox
 2. Copy the whole file content into a browser bookmark URL field
 3. Open a supported conversation page and run the bookmarklet
-4. Choose the run mode and save format in the dialog
+4. Choose the UI language, run mode, and save format in the dialog
 5. Review the quality check and save
 
 ## What it is good for

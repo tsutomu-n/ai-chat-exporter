@@ -11,13 +11,14 @@
 
 这个公开仓库主要提供这两个书签脚本文件。
 当前发布的 bookmarklet 使用更精简的结果界面，不包含可读源码 UI 中那种完整的保存预览。Firefox 版会进一步压缩，以满足 Firefox 的书签长度限制。
+书签脚本的 UI 和导出标签可切换为日文 / 英文 / 简体中文。
 
 ## 基本用法
 
 1. Chrome / Chromium 打开 `ai-chat-export.chrome.bookmarklet.oneliner.js`，Firefox 打开 `ai-chat-export.firefox.bookmarklet.oneliner.js`
 2. 复制整个文件内容，粘贴到书签的 URL 栏
 3. 在支持的对话页面运行书签脚本
-4. 选择运行模式和输出格式
+4. 选择界面语言、运行模式和输出格式
 5. 查看质量状态后保存到文件或复制到剪贴板
 
 ## 运行模式

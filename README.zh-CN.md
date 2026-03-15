@@ -25,6 +25,7 @@
 - 保存前显示质量检查
 - 支持保存到文件或复制到剪贴板
 - 在浏览器里记住模式和导出格式
+- UI 和导出标签可切换为日文 / 英文 / 简体中文
 
 ## 推荐文件
 
@@ -61,7 +62,7 @@
 1. Chrome / Chromium 使用 `ai-chat-export.chrome.bookmarklet.oneliner.js`，Firefox 使用 `ai-chat-export.firefox.bookmarklet.oneliner.js`
 2. 复制整个文件内容，粘贴到浏览器书签的 URL 栏
 3. 打开支持的网站对话页面并运行书签脚本
-4. 在对话框中选择运行模式和保存格式
+4. 在对话框中选择界面语言、运行模式和保存格式
 5. 查看质量检查后再保存
 
 ## 适合哪些场景

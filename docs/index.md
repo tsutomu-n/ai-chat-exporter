@@ -11,13 +11,14 @@
 
 This public repo mainly ships these two bookmarklet files.
 The distributed bookmarklets use a compact result screen and do not include the full save preview from the readable source UI. The Firefox build is smaller still so it stays within Firefox bookmark limits.
+The bookmarklet UI and output labels can be shown in Japanese, English, or Simplified Chinese.
 
 ## Basic usage
 
 1. Open `ai-chat-export.chrome.bookmarklet.oneliner.js` for Chrome / Chromium or `ai-chat-export.firefox.bookmarklet.oneliner.js` for Firefox
 2. Copy the whole file content into a bookmark URL field
 3. Run the bookmarklet on a supported conversation page
-4. Choose the run mode and output format
+4. Choose the UI language, run mode, and output format
 5. Review the quality status and save to file or clipboard
 
 ## Run modes

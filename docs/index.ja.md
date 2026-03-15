@@ -11,13 +11,14 @@
 
 Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.firefox.bookmarklet.oneliner.js` を使う前提に整理しています。公開リポジトリではこの 2 ファイルだけを配布対象にしています。
 配布している bookmarklet は、可読ソース UI にある完全な保存プレビューを省いた compact な結果画面を使っています。Firefox 版はさらに小さくして、Firefox のブックマーク長制限に収めています。
+UI と出力ラベルは、日本語 / 英語 / 简体中文で切り替えられます。
 
 ## 基本的な使い方
 
 1. ブラウザに応じて `ai-chat-export.chrome.bookmarklet.oneliner.js` または `ai-chat-export.firefox.bookmarklet.oneliner.js` を開く
 2. 中身を全部コピーして、ブラウザのブックマーク URL 欄へ貼る
 3. 対応サイトの会話ページでブックマークレットを実行する
-4. 設定ダイアログで実行モードと保存形式を選ぶ
+4. 設定ダイアログで表示言語、実行モード、保存形式を選ぶ
 5. 品質判定を確認して、ファイル保存またはクリップボード保存を行う
 
 ## 実行モードの違い
