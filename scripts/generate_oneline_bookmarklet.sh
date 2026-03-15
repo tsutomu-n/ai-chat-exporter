@@ -353,9 +353,16 @@ unifiedFirefox = replaceRegex(
   }
 
   comparisonBaseLabel(diff){
-    return Number.isFinite(diff?.previous?.count)
-      ? (this.isJapanese() ? \`比較ベース: \${diff.previous.count}件\` : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN') ? \`比较基准: \${diff.previous.count}条\` : \`Comparison base: \${diff.previous.count}\`)
-      : (this.isJapanese() ? '比較ベース: なし' : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN') ? '比较基准: 无' : 'Comparison base: none');
+    const ja = this.isJapanese();
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
+    if (Number.isFinite(diff?.previous?.count)){
+      if (diff?.comparisonKind === 'snapshot'){
+        const label = diff.previousLabel || (ja ? '前回結果' : zh ? '上一次结果' : 'Previous result');
+        return ja ? \`比較ベース: \${label}（\${diff.previous.count}件）\` : zh ? \`比较基准: \${label}（\${diff.previous.count}条）\` : \`Comparison base: \${label} (\${diff.previous.count})\`;
+      }
+      return ja ? \`比較ベース: \${diff.previous.count}件\` : zh ? \`比较基准: \${diff.previous.count}条\` : \`Comparison base: \${diff.previous.count}\`;
+    }
+    return ja ? '比較ベース: なし' : zh ? '比较基准: 无' : 'Comparison base: none';
   }
 
   async confirmRerunDialog(mode='normal'){

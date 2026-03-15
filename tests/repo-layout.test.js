@@ -266,6 +266,17 @@ describe("repository layout", () => {
     expect(generator).toContain("stage==='final' ? (ja?'最終確認中':zh?'正在做最后检查':'Final checks')");
   });
 
+  test("keeps compact comparison labels aligned with the readable source behavior", () => {
+    const generator = readRepoFile("scripts", "generate_oneline_bookmarklet.sh");
+
+    expect(generator).toContain("comparisonBaseLabel(diff){");
+    expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
+    expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
+    expect(generator).toContain("\\`比較ベース: \\${label}（\\${diff.previous.count}件）\\`");
+    expect(generator).toContain("\\`Comparison base: \\${label} (\\${diff.previous.count})\\`");
+    expect(generator).toContain("\\`比较基准: \\${label}（\\${diff.previous.count}条）\\`");
+  });
+
   test("keeps only the curated README screenshots under stable names", () => {
     expect(existsSync(rootPath("assets", "01-bookmark-setup.png"))).toBe(true);
     expect(existsSync(rootPath("assets", "02-config-dialog.png"))).toBe(true);
