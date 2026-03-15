@@ -951,11 +951,14 @@ describe("ai-chat export formats", () => {
     const text = globalThis.document.body.textContent;
 
     expect(text).toContain("保存前确认");
+    expect(text).toContain("状态: 需要快速检查（75分）");
+    expect(text).toContain("如果聊天很长，重新运行一次可能会更稳定。");
     expect(text).toContain("输出文件名");
     expect(text).toContain("手动复制");
     expect(text).toContain("从这里复制");
     expect(text).toContain("查看质量详情");
     expect(text).toContain("复制到剪贴板");
+    expect(text).not.toContain("Needs a quick check");
 
     const cancelButton = globalThis.document.body
       .querySelectorAll("button")

@@ -2275,27 +2275,39 @@ class App{
     const q = quality || {status:'WARN', score:0};
     const label = this.isJapanese()
       ? (q.status==='PASS'?'良好' : q.status==='WARN'?'やや不安' : '要再実行')
+      : this.isChinese()
+      ? (q.status==='PASS'?'良好' : q.status==='WARN'?'需要快速检查' : '建议重新运行')
       : (q.status==='PASS'?'Looks good' : q.status==='WARN'?'Needs a quick check' : 'Rerun recommended');
     const color = q.status==='PASS'?THEME.ok : q.status==='WARN'?THEME.warn : THEME.bad;
 
     let hint = '';
     if (q.status==='PASS') hint = this.isJapanese()
       ? '概ね問題なさそうです。'
+      : this.isChinese()
+      ? '看起来可以保存。'
       : 'The result looks stable enough to save.';
     else if (q.status==='WARN') hint = this.isJapanese()
       ? '会話が長い場合は、もう一度実行すると安定することがあります。'
+      : this.isChinese()
+      ? '如果聊天很长，重新运行一次可能会更稳定。'
       : 'If the chat is long, rerunning once may improve stability.';
     else hint = this.isJapanese()
       ? '取得漏れの可能性が高いです。もう一度実行を推奨します。'
+      : this.isChinese()
+      ? '可能有内容缺失。建议保存前重新运行。'
       : 'Missing content is likely. Rerun before saving.';
 
     if ((q.weakIdentityMessages||0) > 0 && !q.identityStable){
       hint = this.isJapanese()
         ? '一部メッセージの識別が弱く、重複や順序の精度が落ちる可能性があります。'
+        : this.isChinese()
+        ? '部分消息的识别较弱，去重和顺序可能不够稳定。'
         : 'Some message identities are weak, so dedupe and ordering may be less reliable.';
     } else if ((q.unknownMessages||0) > 0){
       hint = this.isJapanese()
         ? '一部メッセージの話者判定が不明です。DOM変更の影響を受けている可能性があります。'
+        : this.isChinese()
+        ? '部分说话者标签无法确定，可能受到了 DOM 变化的影响。'
         : 'Some speaker labels are unknown. A DOM change may have affected extraction.';
     }
 
@@ -2306,14 +2318,20 @@ class App{
       const sign = diff.diff>0?'+':'';
       diffLine = this.isJapanese()
         ? `${diff.previousLabel || '前回'}: ${this.formatCount(diff.previous.count)} / 今回: ${this.formatCount(diff.now.count)}（差分 ${sign}${this.formatCount(diff.diff)}）`
+        : this.isChinese()
+        ? `${diff.previousLabel || '上一次'}: ${this.formatCount(diff.previous.count)} / 本次: ${this.formatCount(diff.now.count)}（差值 ${sign}${this.formatCount(diff.diff)}）`
         : `${diff.previousLabel || 'Previous'}: ${this.formatNumber(diff.previous.count)} / Current: ${this.formatNumber(diff.now.count)} (delta ${sign}${this.formatNumber(diff.diff)})`;
       if (!diff.stable && diff.rate>=0.12){
         hint = this.isJapanese()
           ? '前回との差が大きいです。スクロールが途中で止まった可能性があります。'
+          : this.isChinese()
+          ? '与上一次的差异较大，滚动可能过早停止了。'
           : 'The difference from the previous result is large. Scrolling may have stopped early.';
       } else if (diff.digestSame){
         hint = this.isJapanese()
           ? '前回とほぼ同じ内容です（安定）。'
+          : this.isChinese()
+          ? '这次和上一次几乎相同。'
           : 'This is almost identical to the previous result.';
       }
     }
@@ -2321,9 +2339,13 @@ class App{
     if (!diff?.previous && abortedLast){
       diffLine = this.isJapanese()
         ? '前回: 保存なし（中断）。今回は新規再取得で比較基準はリセットされます。'
+        : this.isChinese()
+        ? '上一次: 未保存（已中断）。这次重新提取后，比较基准会重置。'
         : 'Previous: not saved (aborted). The comparison base was reset for this fresh rerun.';
       hint = this.isJapanese()
         ? '前回は保存されていないため、今回は保存結果を基準に比較します。'
+        : this.isChinese()
+        ? '上一次没有保存，所以之后会以这次保存结果作为比较基准。'
         : 'The previous run was not saved, so future comparisons will use this saved result.';
     }
     return {label, color, hint, diffLine, score:q.score, raw:q};

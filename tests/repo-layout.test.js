@@ -270,6 +270,9 @@ describe("repository layout", () => {
     const generator = readRepoFile("scripts", "generate_oneline_bookmarklet.sh");
 
     expect(generator).toContain("comparisonBaseLabel(diff){");
+    expect(generator).toContain("const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Good') : q.status==='WARN' ? (ja ? '注意' : zh ? '快速检查' : 'Review') : (ja ? '再実行' : zh ? '建议重试' : 'Rerun');");
+    expect(generator).toContain("zh ? '较长时可重试一次。'");
+    expect(generator).toContain("parts.push(ja ? '前回との差が大きい' : zh ? '与上一次差异较大' : 'large delta from previous');");
     expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
     expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
     expect(generator).toContain("const count = diff?.previous?.count;");

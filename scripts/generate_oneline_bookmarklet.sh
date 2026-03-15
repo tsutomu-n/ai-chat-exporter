@@ -275,9 +275,9 @@ unifiedFirefox = replaceRegex(
     const q = quality || {status:'WARN', score:0};
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-    const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Good') : q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
+    const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Good') : q.status==='WARN' ? (ja ? '注意' : zh ? '快速检查' : 'Review') : (ja ? '再実行' : zh ? '建议重试' : 'Rerun');
     const color = q.status==='PASS' ? THEME.ok : q.status==='WARN' ? THEME.warn : THEME.bad;
-    const hint = q.status==='PASS' ? (ja ? '保存してよさそうです。' : zh ? '看起来可以保存。' : 'Ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行してください。' : zh ? '如有需要，请重新运行一次。' : 'Rerun if needed.') : (ja ? '再実行推奨です。' : zh ? '建议重新运行。' : 'Rerun recommended.');
+    let hint = q.status==='PASS' ? (ja ? '保存できそうです。' : zh ? '可保存。' : 'Ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行。' : zh ? '较长时可重试一次。' : 'Rerun if needed.') : (ja ? '再実行推奨です。' : zh ? '可能缺失，建议重试。' : 'Rerun recommended.');
     let diffLine = '';
     if (diff?.previous){
       const prev = diff.previous.count;
@@ -289,6 +289,7 @@ unifiedFirefox = replaceRegex(
         : zh
         ? \`\${diff.previousLabel || '上一次'}: \${prev}条 / 本次: \${now}条（差值 \${sign}\${delta}条）\`
         : \`\${diff.previousLabel || 'Previous'}: \${prev} / Now: \${now} (delta \${sign}\${delta})\`;
+      if (Math.abs(delta) > 1) hint = ja ? '前回との差が大きいです。' : zh ? '与上次差异大。' : 'Large delta from previous.';
     }
     return {label, color, hint, diffLine, score:q.score, raw:q};
   }
@@ -300,25 +301,6 @@ unifiedFirefox = replaceRegex(
   unifiedFirefox,
   /\n\s*buildExportMetadata\(title, messages, quality, diff, preset=this\.config\.preset\)\{[\s\S]*?\n\s*formatOutput\(messages, quality, diff, preset=this\.config\.preset\)\{/,
   `
-  buildExportMetadata(title, messages, quality, diff, preset=this.config.preset){
-    return {
-      title,
-      site: this.getSiteLabel(),
-      conversation_url: location.href,
-      saved_at: Utils.formatDateJST(new Date()),
-      message_count: messages.length,
-      preset,
-      format: this.getFormatId(),
-      quality_status: quality?.status || 'WARN',
-      quality_score: quality?.score ?? 0,
-      previous_count: diff?.previous?.count
-    };
-  }
-
-  dumpYaml(obj){
-    return ['---', ...Object.entries(obj).map(([k,v])=>\`\${k}: \${this.yamlValue(v)}\`), '---', ''].join('\\n');
-  }
-
   warningSummary({quality, diff}){
     const q = quality || {status:'WARN'};
     const ja = this.isJapanese();
@@ -327,7 +309,7 @@ unifiedFirefox = replaceRegex(
     if (q.status!=='PASS') parts.push(q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun'));
     if (diff?.previous){
       const diffAbs = Math.abs(diff.diff || 0);
-      if (diffAbs > 1) parts.push(ja ? \`差分 \${diff.diff>0?'+':''}\${diff.diff}件\` : zh ? \`差值 \${diff.diff>0?'+':''}\${diff.diff}条\` : \`delta \${diff.diff>0?'+':''}\${diff.diff}\`);
+      if (diffAbs > 1) parts.push(ja ? '前回との差が大きい' : zh ? '与上一次差异较大' : 'large delta from previous');
     }
     const text = parts.length ? parts.join(' / ') : (ja ? 'なし' : zh ? '无' : 'none');
     return {hasWarning: parts.length > 0, text};
@@ -373,8 +355,8 @@ unifiedFirefox = replaceRegex(
   async confirmRerunDialog(mode='normal'){
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-    const label = mode==='careful' ? (ja ? 'ていねいに再実行' : zh ? '细致重试' : 'Rerun carefully') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
-    return window.confirm(ja ? \`\${label}しますか？\\n現在の結果は保持したまま再取得します。\` : zh ? \`\${label}吗？\\n当前结果会保留，同时重新提取。\` : \`\${label}?\\nThe current result will be kept while extracting again.\`);
+    const label = mode==='careful' ? (ja ? 'ていねいに再実行' : zh ? '细致重试' : 'Careful rerun') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
+    return window.confirm(ja ? \`\${label}しますか？\\n現在結果を保持して再取得します。\` : zh ? \`\${label}吗？\\n保留当前结果并重试。\` : \`\${label}?\\nKeep the current result and run again.\`);
   }
 
   makeFileName(title){
@@ -430,7 +412,7 @@ unifiedFirefox = replaceRegex(
       const footerButtons = [
         this.btn(isJa ? '中止' : isZh ? '取消' : 'Cancel','subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn(isJa ? 'ていねいに再実行' : isZh ? '细致重试' : 'Rerun carefully','secondary', async ()=>{
+        this.btn(isJa ? 'ていねいに再実行' : isZh ? '细致重试' : 'Careful rerun','secondary', async ()=>{
           if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
         }),
         this.btn(isJa ? 'クリップボードにコピー' : isZh ? '复制' : 'Copy to clipboard','secondary', async ()=>{
@@ -439,15 +421,15 @@ unifiedFirefox = replaceRegex(
             Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制。' : 'Copied.','success');
             finish({action:'done_clipboard', saveState:'clipboard'});
           }catch{
-            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : isZh ? '复制失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
+            Utils.toast(isJa ? 'コピー失敗のため、ファイル保存に切り替えます。' : isZh ? '复制失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
             const ok = this.downloadFile(fileName, output);
             if (ok){
               finish({action:'done_file', saveState:'file'});
             }else{
               try{
-                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : isZh ? '复制失败。请从这里手动复制。' : 'Copy failed. Copy here.', output);
+                window.prompt(isJa ? 'コピー失敗。ここから手動でコピーしてください。' : isZh ? '复制失败。请从这里手动复制。' : 'Copy failed. Copy here.', output);
               }catch{
-                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : isZh ? '复制和保存都失败。' : 'Copy/save failed.','warn', 3200);
+                Utils.toast(isJa ? 'コピーも保存も失敗しました。' : isZh ? '复制和保存都失败。' : 'Copy/save failed.','warn', 3200);
               }
             }
           }
