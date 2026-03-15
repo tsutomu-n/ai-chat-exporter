@@ -1001,6 +1001,17 @@ describe("ai-chat export formats", () => {
     expect(app.largeDeltaLabelText()).toBe("与上一次差异较大");
   });
 
+  test("provides compact dialog wording helpers for lightweight bookmarklets", () => {
+    const { app } = loadApp({ navigatorLanguage: "zh-CN" });
+
+    expect(app.compactDialogText("title")).toBe("保存确认");
+    expect(app.compactDialogText("copy")).toBe("复制");
+    expect(app.compactDialogText("save")).toBe("保存");
+    expect(app.compactDialogText("copied")).toBe("已复制。");
+    expect(app.compactDialogText("manual_copy_prompt")).toBe("复制失败。请从这里手动复制。");
+    expect(app.compactDialogText("copy_save_failed")).toBe("复制和保存都失败。");
+  });
+
   test("reruns carefully without persisting the preset change", async () => {
     const { app } = loadApp({
       storedConfig: {

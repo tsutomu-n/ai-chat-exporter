@@ -2318,6 +2318,21 @@ class App{
     return this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大');
   }
 
+  compactDialogText(key){
+    const table = {
+      title: this.text('保存前の確認', 'Review before saving', '保存确认'),
+      cancel: this.text('中止', 'Cancel', '取消'),
+      careful_rerun: this.text('ていねいに再実行', 'Careful rerun', '细致重试'),
+      copy: this.text('クリップボードにコピー', 'Copy to clipboard', '复制'),
+      save: this.text('保存', 'Save file', '保存'),
+      copied: this.text('コピーしました。', 'Copied.', '已复制。'),
+      copy_failed_save: this.text('コピー失敗のため、ファイル保存に切り替えます。', 'Clipboard copy failed, switching to file save.', '复制失败，改为保存文件。'),
+      manual_copy_prompt: this.text('コピー失敗。ここから手動でコピーしてください。', 'Copy failed. Copy here.', '复制失败。请从这里手动复制。'),
+      copy_save_failed: this.text('コピーも保存も失敗しました。', 'Copy/save failed.', '复制和保存都失败。')
+    };
+    return table[key] || '';
+  }
+
   qualitySummary(quality, diff){
     // qualityが無いケースもある
     const q = quality || {status:'WARN', score:0};

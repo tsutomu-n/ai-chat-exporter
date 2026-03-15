@@ -276,6 +276,12 @@ describe("repository layout", () => {
     expect(generator).toContain("const statusText = this.qualityStatusText(q.status,true);");
     expect(generator).toContain("parts.push(ja || zh ? statusText : statusText.toLowerCase());");
     expect(generator).toContain("parts.push(this.largeDeltaLabelText());");
+    expect(generator).toContain("this.compactDialogText('title')");
+    expect(generator).toContain("this.compactDialogText('copy')");
+    expect(generator).toContain("this.compactDialogText('save')");
+    expect(generator).toContain("this.compactDialogText('copied')");
+    expect(generator).toContain("this.compactDialogText('manual_copy_prompt')");
+    expect(generator).toContain("this.compactDialogText('copy_save_failed')");
     expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
     expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
     expect(generator).toContain("const count = diff?.previous?.count;");
