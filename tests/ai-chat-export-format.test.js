@@ -835,6 +835,7 @@ describe("ai-chat export formats", () => {
     expect(text).not.toContain("Saved file name");
     expect(text).not.toContain("Manual copy area (fallback)");
     expect(text).not.toContain("Copy if possible");
+    expect(text.match(/Review before saving/g)?.length).toBe(1);
 
     const cancelButton = globalThis.document.body
       .querySelectorAll("button")

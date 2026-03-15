@@ -10,7 +10,7 @@
   - Firefox で使う軽量統合版
 
 Chrome / Chromium 系では `./ai-chat-export.chrome.bookmarklet.oneliner.js`、Firefox では `./ai-chat-export.firefox.bookmarklet.oneliner.js` を使う前提に整理しています。公開リポジトリではこの 2 ファイルだけを配布対象にしています。
-Firefox 版も取得フロー自体は同じですが、ブックマーク長制限に収めるため、保存プレビューと結果画面を compact にしています。
+配布している bookmarklet は、可読ソース UI にある完全な保存プレビューを省いた compact な結果画面を使っています。Firefox 版はさらに小さくして、Firefox のブックマーク長制限に収めています。
 
 ## 基本的な使い方
 

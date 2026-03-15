@@ -2819,7 +2819,6 @@ class App{
       const modal = Utils.el('div',{style:`width:min(720px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
 
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
-        Utils.el('div',{text:isJa ? '保存前の確認' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
         Utils.el('div',{text:this.text('保存前の確認', 'Review before saving', '保存前确认'),style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
         Utils.el('div',{text:isJa ? `判定: ${summary.label}（${this.formatPoints(summary.score)}）` : isZh ? `状态: ${summary.label}（${this.formatPoints(summary.score)}）` : `Status: ${summary.label} (${this.formatPoints(summary.score)})`,style:`font-size:14px;line-height:1.6;color:${summary.color};font-weight:700;`}),
         Utils.el('div',{text:summary.hint,style:`margin-top:6px;font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`}),
