@@ -68,6 +68,64 @@ minimal = replaceExact(
   "const FORMAT_ORDER = ENABLE_OBSIDIAN_FORMAT ? ['std', 'txt', 'obs'] : ['std', 'txt'];",
   'FORMAT_ORDER',
 );
+minimal = replaceRegex(
+  minimal,
+  /const FORMAT_TEXT = Object\.freeze\(\{[\s\S]*?\n\}\);/,
+  `const FORMAT_TEXT=Object.freeze({std:Object.freeze({label:{ja:'Markdown',en:'Markdown','zh-CN':'Markdown'},hint:{ja:'',en:'','zh-CN':''}}),txt:Object.freeze({label:{ja:'プレーンテキスト',en:'Plain text','zh-CN':'纯文本'},hint:{ja:'',en:'','zh-CN':''}})});`,
+  'minimal FORMAT_TEXT',
+);
+minimal = replaceRegex(
+  minimal,
+  /\n\s*languageDescription\(lang\)\{[\s\S]*?\n\s*storageKeys\(\)\{/,
+  `
+  languageDescription(lang){
+    return this.isJapanese()?(normalizeLangId(lang)==='ja'?'日本語UI':'英語UI'):(normalizeLangId(lang)==='zh-CN'?'中文 UI':'English UI');
+  }
+
+  storageKeys(){`,
+  'minimal languageDescription',
+);
+minimal = replaceRegex(
+  minimal,
+  /\n\s*formatTimes\(value\)\{[\s\S]*?\n\s*getSiteLabel\(\)\{/,
+  `
+  formatTimes(value){
+    return this.isJapanese()?this.formatNumber(value)+'回':this.isChinese()?this.formatNumber(value)+'次':this.formatNumber(value)+' times';
+  }
+
+  formatPoints(value){
+    return this.isJapanese()?this.formatNumber(value)+'点':this.isChinese()?this.formatNumber(value)+'分':this.formatNumber(value)+' pts';
+  }
+
+  yesNo(value){
+    return this.isJapanese()?(value?'はい':'いいえ'):this.isChinese()?(value?'是':'否'):(value?'Yes':'No');
+  }
+
+  getSiteLabel(){`,
+  'minimal format helpers',
+);
+minimal = replaceRegex(
+  minimal,
+  /\n\s*getSiteLabel\(\)\{[\s\S]*?\n\s*languageLabel\(lang\)\{/,
+  `
+  getSiteLabel(){
+    return this.adapter.id==='generic'?(this.isJapanese()?'汎用':this.isChinese()?'通用':'Generic'):this.adapter.label;
+  }
+
+  languageLabel(lang){`,
+  'minimal site label',
+);
+minimal = replaceRegex(
+  minimal,
+  /\n\s*roleLabel\(role\)\{[\s\S]*?\n\s*yamlValue\(v\)\{/,
+  `
+  roleLabel(role){
+    return role==='User'?(this.isJapanese()?'あなた':this.isChinese()?'你':'You'):role==='Model'?'AI':role==='Tool'?(this.isJapanese()?'ツール':this.isChinese()?'工具':'Tool'):(this.isJapanese()?'不明':this.isChinese()?'未知':'Unknown');
+  }
+
+  yamlValue(v){`,
+  'minimal roleLabel',
+);
 minimal = removeBetween(
   minimal,
   "  buildQualityDetailText(quality){",
@@ -95,21 +153,21 @@ minimal = removeBetween(
 minimal = replaceExact(
   minimal,
   `          }catch{
-            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : 'Clipboard copy failed, switching to file save.', 'warn', 3200);
+            Utils.toast(this.text('コピーできなかったため、ファイル保存に切り替えます。', 'Clipboard copy failed, switching to file save.', '复制到剪贴板失败，改为保存文件。'), 'warn', 3200);
             const ok = this.downloadFile(currentFileName, output);
             if (ok){
-              await finalizeWithState({action:'done_file', saveState:'file'}, isJa ? 'ファイル保存済み' : 'Saved as file');
+              await finalizeWithState({action:'done_file', saveState:'file'}, this.text('ファイル保存済み', 'Saved as file', '已保存为文件'));
             }else{
-              setSaveState(isJa ? 'コピー/保存に失敗' : 'Copy/save failed');
-              Utils.toast(isJa ? '保存に失敗しました。' : 'Save failed.', 'error', 2200);
+              setSaveState(this.text('コピー/保存に失敗', 'Copy/save failed', '复制/保存失败'));
+              Utils.toast(this.text('保存に失敗しました。', 'Save failed.', '保存失败。'), 'error', 2200);
               finish({action:'done_fail', saveState:'failed'});
             }
           }`,
   `          }catch{
             try{
-              window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : 'Copy failed. Copy the text manually from this prompt.', output);
+              window.prompt(this.text('コピーできなかったため、この欄から手動でコピーしてください。', 'Copy failed. Copy the text manually from this prompt.', '复制失败。请从这个输入框手动复制文本。'), output);
             }catch{
-              Utils.toast(isJa ? 'コピーできませんでした。保存（ファイル）を使ってください。' : 'Copy failed. Use Save file instead.','warn', 3200);
+              Utils.toast(this.text('コピーできませんでした。保存（ファイル）を使ってください。', 'Copy failed. Use Save file instead.', '复制失败。请改用保存文件。'),'warn', 3200);
             }
           }`,
   'minimal clipboard prompt fallback',
@@ -121,11 +179,12 @@ minimal = replaceRegex(
   async showConfigDialog(){
     return new Promise(resolve=>{
       const ja = this.isJapanese();
+      const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
       const ov = this.overlay();
       const modal = Utils.el('div',{style:\`width:min(460px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
       const body = Utils.el('div',{style:'padding:16px;display:grid;gap:10px;'});
-      const title = Utils.el('div',{text:ja?'AIチャットを書き出す':'Export AI chat',style:'font-size:18px;line-height:1.35;font-weight:700;'});
-      const site = Utils.el('div',{text:ja?\`サイト: \${this.getSiteLabel()}\`:\`Site: \${this.getSiteLabel()}\`,style:\`font-size:13px;line-height:1.6;color:\${THEME.muted};font-weight:600;\`});
+      const title = Utils.el('div',{text:ja?'AIチャットを書き出す':zh?'导出 AI 对话':'Export AI chat',style:'font-size:18px;line-height:1.35;font-weight:700;'});
+      const site = Utils.el('div',{text:ja?\`サイト: \${this.getSiteLabel()}\`:zh?\`站点: \${this.getSiteLabel()}\`:\`Site: \${this.getSiteLabel()}\`,style:\`font-size:13px;line-height:1.6;color:\${THEME.muted};font-weight:600;\`});
       const row = (label, children)=>{
         const box = Utils.el('div',{style:'display:grid;gap:8px;'});
         box.appendChild(Utils.el('div',{text:label,style:'font-size:13px;line-height:1.5;font-weight:700;'}));
@@ -144,28 +203,29 @@ minimal = replaceRegex(
         return wrap;
       };
       body.append(title, site);
-      body.appendChild(row(ja?'言語':'Language', chips([
+      body.appendChild(row(ja?'言語':zh?'语言':'Language', chips([
         {id:'en',label:'English'},
-        {id:'ja',label:'日本語'}
+        {id:'ja',label:'日本語'},
+        {id:'zh-CN',label:'中文'}
       ], this.getLang(), (lang)=>{ this.config.lang=lang; this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); })));
-      body.appendChild(row(ja?'速度':'Mode', chips([
+      body.appendChild(row(ja?'速度':zh?'运行模式':'Mode', chips([
         {id:'fast',label:this.getPresetLabelFor('fast')},
         {id:'normal',label:this.getPresetLabelFor('normal')},
         {id:'careful',label:this.getPresetLabelFor('careful')}
       ], this.config.preset, (preset)=>{ this.applyPreset(preset); this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); })));
-      body.appendChild(row(ja?'形式':'Format', chips(FORMAT_ORDER.map(id=>({id,label:this.getFormatDefFor(id).label})), this.getFormatId(), (id)=>{ this.config.fmt=id; this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); })));
+      body.appendChild(row(ja?'形式':zh?'格式':'Format', chips(FORMAT_ORDER.map(id=>({id,label:this.getFormatDefFor(id).label})), this.getFormatId(), (id)=>{ this.config.fmt=id; this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); })));
       if (this.getFormatId()==='txt'){
         const txt = Utils.el('label',{style:'display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.6;'});
         const cb = Utils.el('input',{type:'checkbox',style:'margin-top:3px;'});
         cb.checked = !!this.config.txtHeader;
         cb.addEventListener('change', ()=>{ this.config.txtHeader=cb.checked; this.saveConfig(); });
-        txt.append(cb, Utils.el('span',{text:ja?'会話ヘッダーを付ける':'Include conversation header'}));
+        txt.append(cb, Utils.el('span',{text:ja?'会話ヘッダーを付ける':zh?'包含对话头部信息':'Include conversation header'}));
         body.appendChild(txt);
       }
       const footer = Utils.el('div',{style:\`padding:14px 16px;background:\${THEME.bg};border-top:1px solid \${THEME.border};display:flex;gap:10px;justify-content:flex-end;\`});
       footer.append(
-        this.btn(ja?'キャンセル':'Cancel','subtle', ()=>{ ov.remove(); resolve(false); }),
-        this.btn(ja?'開始':'Start','primary', ()=>{ ov.remove(); resolve(true); })
+        this.btn(ja?'キャンセル':zh?'取消':'Cancel','subtle', ()=>{ ov.remove(); resolve(false); }),
+        this.btn(ja?'開始':zh?'开始':'Start','primary', ()=>{ ov.remove(); resolve(true); })
       );
       modal.append(body, footer);
       ov.appendChild(modal);
@@ -175,14 +235,15 @@ minimal = replaceRegex(
 
   showBusyDialog(){
     const ja = this.isJapanese();
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const ov = this.overlay();
     const modal = Utils.el('div',{style:\`width:min(420px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
     const body = Utils.el('div',{style:'padding:16px;display:grid;gap:8px;'});
-    const title = Utils.el('div',{text:ja?'処理中':'Working',style:'font-size:18px;line-height:1.35;font-weight:700;'});
-    const info = Utils.el('div',{text:ja?'会話を集めています…':'Collecting messages…',style:\`font-size:13px;line-height:1.6;color:\${THEME.muted};font-weight:500;\`});
+    const title = Utils.el('div',{text:ja?'処理中':zh?'处理中':'Working',style:'font-size:18px;line-height:1.35;font-weight:700;'});
+    const info = Utils.el('div',{text:ja?'会話を集めています…':zh?'正在收集消息…':'Collecting messages…',style:\`font-size:13px;line-height:1.6;color:\${THEME.muted};font-weight:500;\`});
     body.append(title, info);
     const footer = Utils.el('div',{style:\`padding:12px 16px;background:\${THEME.bg};border-top:1px solid \${THEME.border};display:flex;justify-content:flex-end;\`});
-    footer.append(this.btn(ja?'中断':'Abort','danger', ()=>{ this.abortState.aborted=true; Utils.toast(ja?'中断しました。':'Aborted.','warn'); }));
+    footer.append(this.btn(ja?'中断':zh?'中止':'Abort','danger', ()=>{ this.abortState.aborted=true; Utils.toast(ja?'中断しました。':zh?'已中止。':'Aborted.','warn'); }));
     modal.append(body, footer);
     ov.appendChild(modal);
     document.body.appendChild(ov);
@@ -194,7 +255,7 @@ minimal = replaceRegex(
     if (!this.busyUI) return;
     const stage = p?.stage || '';
     const ja = this.isJapanese();
-    this.busyUI.title.textContent = stage==='final' ? (ja?'最終確認中':'Final checks') : (ja?'処理中':'Working');
+    this.busyUI.title.textContent = stage==='final' ? (ja?'最終確認中':zh?'正在做最后检查':'Final checks') : (ja?'処理中':zh?'处理中':'Working');
     if (p?.message) this.busyUI.desc.textContent = p.message;
   }
 
@@ -228,14 +289,17 @@ unifiedFirefox = replaceRegex(
   qualitySummary(quality,diff){
     const q = quality || {status:'WARN', score:0};
     const ja = this.isJapanese();
-    const label = q.status==='PASS' ? (ja ? '良好' : 'Looks good') : q.status==='WARN' ? (ja ? '注意' : 'Review') : (ja ? '再実行' : 'Rerun');
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
+    const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Looks good') : q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
     const color = q.status==='PASS' ? THEME.ok : q.status==='WARN' ? THEME.warn : THEME.bad;
-    const hint = q.status==='PASS' ? (ja ? '保存してよさそうです。' : 'This looks ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行してください。' : 'Rerun if you need a cleaner result.') : (ja ? '再実行推奨です。' : 'Rerunning is recommended.');
+    const hint = q.status==='PASS' ? (ja ? '保存してよさそうです。' : zh ? '看起来可以保存。' : 'This looks ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行してください。' : zh ? '如有需要，请重新运行一次。' : 'Rerun if you need a cleaner result.') : (ja ? '再実行推奨です。' : zh ? '建议重新运行。' : 'Rerunning is recommended.');
     let diffLine = '';
     if (diff?.previous){
       const sign = diff.diff>0 ? '+' : '';
       diffLine = ja
         ? \`\${diff.previousLabel || '前回'}: \${diff.previous.count}件 / 今回: \${diff.now.count}件（差分 \${sign}\${diff.diff}件）\`
+        : zh
+        ? \`\${diff.previousLabel || '上一次'}: \${diff.previous.count}条 / 本次: \${diff.now.count}条（差值 \${sign}\${diff.diff}条）\`
         : \`\${diff.previousLabel || 'Previous'}: \${diff.previous.count} / Now: \${diff.now.count} (delta \${sign}\${diff.diff})\`;
     }
     return {label, color, hint, diffLine, score:q.score, raw:q};
@@ -270,23 +334,27 @@ unifiedFirefox = replaceRegex(
   warningSummary({quality, diff}){
     const q = quality || {status:'WARN'};
     const ja = this.isJapanese();
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const parts = [];
-    if (q.status!=='PASS') parts.push(q.status==='WARN' ? (ja ? '注意' : 'Review') : (ja ? '再実行' : 'Rerun'));
+    if (q.status!=='PASS') parts.push(q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun'));
     if (diff?.previous){
       const diffAbs = Math.abs(diff.diff || 0);
-      if (diffAbs > 1) parts.push(ja ? \`差分 \${diff.diff>0?'+':''}\${diff.diff}件\` : \`delta \${diff.diff>0?'+':''}\${diff.diff}\`);
+      if (diffAbs > 1) parts.push(ja ? \`差分 \${diff.diff>0?'+':''}\${diff.diff}件\` : zh ? \`差值 \${diff.diff>0?'+':''}\${diff.diff}条\` : \`delta \${diff.diff>0?'+':''}\${diff.diff}\`);
     }
-    const text = parts.length ? parts.join(' / ') : (ja ? 'なし' : 'none');
+    const text = parts.length ? parts.join(' / ') : (ja ? 'なし' : zh ? '无' : 'none');
     return {hasWarning: parts.length > 0, text};
   }
 
   compactSummaryLines(messages, quality, diff, savedState='未保存'){
     const ja = this.isJapanese();
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const diffLine = diff?.previous
-      ? (ja ? \`前回比: \${diff.diff>0?'+':''}\${diff.diff}件\` : \`Delta: \${diff.diff>0?'+':''}\${diff.diff}\`)
-      : (ja ? '前回比: なし' : 'Delta: none');
+      ? (ja ? \`前回比: \${diff.diff>0?'+':''}\${diff.diff}件\` : zh ? \`与上次相比: \${diff.diff>0?'+':''}\${diff.diff}条\` : \`Delta: \${diff.diff>0?'+':''}\${diff.diff}\`)
+      : (ja ? '前回比: なし' : zh ? '与上次相比: 无' : 'Delta: none');
     return ja
       ? [\`抽出件数: \${messages.length}件\`, \`保存状態: \${savedState}\`, diffLine]
+      : zh
+      ? [\`已提取: \${messages.length}条\`, \`保存状态: \${savedState}\`, diffLine]
       : [\`Messages: \${messages.length}\`, \`Saved state: \${savedState}\`, diffLine];
   }
 
@@ -294,19 +362,22 @@ unifiedFirefox = replaceRegex(
     const {previous} = this.loadRunMeta();
     return this.isJapanese()
       ? \`最終保存: \${Number.isFinite(previous?.count) ? \`\${previous.count}件\` : 'なし'}\`
+      : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN')
+      ? \`上次保存: \${Number.isFinite(previous?.count) ? \`\${previous.count}条\` : '无'}\`
       : \`Last saved: \${Number.isFinite(previous?.count) ? \`\${previous.count}\` : 'none'}\`;
   }
 
   comparisonBaseLabel(diff){
     return Number.isFinite(diff?.previous?.count)
-      ? (this.isJapanese() ? \`比較ベース: \${diff.previous.count}件\` : \`Comparison base: \${diff.previous.count}\`)
-      : (this.isJapanese() ? '比較ベース: なし' : 'Comparison base: none');
+      ? (this.isJapanese() ? \`比較ベース: \${diff.previous.count}件\` : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN') ? \`比较基准: \${diff.previous.count}条\` : \`Comparison base: \${diff.previous.count}\`)
+      : (this.isJapanese() ? '比較ベース: なし' : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN') ? '比较基准: 无' : 'Comparison base: none');
   }
 
   async confirmRerunDialog(mode='normal'){
     const ja = this.isJapanese();
-    const label = mode==='careful' ? (ja ? 'ていねいに再実行' : 'Rerun carefully') : (ja ? '再実行' : 'Rerun');
-    return window.confirm(ja ? \`\${label}しますか？\\n現在の結果は保持したまま再取得します。\` : \`\${label}?\\nThe current result will be kept while extracting again.\`);
+    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
+    const label = mode==='careful' ? (ja ? 'ていねいに再実行' : zh ? '细致重试' : 'Rerun carefully') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
+    return window.confirm(ja ? \`\${label}しますか？\\n現在の結果は保持したまま再取得します。\` : zh ? \`\${label}吗？\\n当前结果会保留，同时重新提取。\` : \`\${label}?\\nThe current result will be kept while extracting again.\`);
   }
 
   makeFileName(title){
@@ -327,6 +398,7 @@ unifiedFirefox = replaceRegex(
   async showResultDialog(messages, quality, options={}){
     return new Promise(resolve=>{
       const isJa = this.isJapanese();
+      const isZh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
       const alternateSnapshot = options?.alternateSnapshot || null;
       const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : 'Previous result');
       const resultPreset = options?.preset || this.config.preset;
@@ -337,13 +409,15 @@ unifiedFirefox = replaceRegex(
       const ov = this.overlay();
       const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
       const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
-      body.appendChild(Utils.el('div',{text:isJa ? '保存前の確認' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;'}));
+      body.appendChild(Utils.el('div',{text:isJa ? '保存前の確認' : isZh ? '保存前确认' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;'}));
       const lines = [
-        isJa ? \`判定: \${summary.label}（\${summary.score}点）\` : \`Status: \${summary.label} (\${summary.score} pts)\`,
+        isJa ? \`判定: \${summary.label}（\${summary.score}点）\` : isZh ? \`状态: \${summary.label}（\${summary.score}分）\` : \`Status: \${summary.label} (\${summary.score} pts)\`,
         summary.hint,
         summary.diffLine || this.comparisonBaseLabel(diff),
         isJa
           ? \`件数: \${messages.length}件 / 速度: \${this.getPresetLabelFor(resultPreset)} / 形式: \${this.getFormatLabel()}\`
+          : isZh
+          ? \`消息数: \${messages.length}条 / 运行模式: \${this.getPresetLabelFor(resultPreset)} / 格式: \${this.getFormatLabel()}\`
           : \`Messages: \${messages.length} / Mode: \${this.getPresetLabelFor(resultPreset)} / Format: \${this.getFormatLabel()}\`
       ];
       for (const line of lines){
@@ -357,31 +431,31 @@ unifiedFirefox = replaceRegex(
       };
 
       const footerButtons = [
-        this.btn(isJa ? '中止' : 'Cancel','subtle', ()=>finish({action:'cancel'})),
+        this.btn(isJa ? '中止' : isZh ? '取消' : 'Cancel','subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn(isJa ? 'ていねいに再実行' : 'Rerun carefully','secondary', async ()=>{
+        this.btn(isJa ? 'ていねいに再実行' : isZh ? '细致重试' : 'Rerun carefully','secondary', async ()=>{
           if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
         }),
-        this.btn(isJa ? 'クリップボードにコピー' : 'Copy to clipboard','secondary', async ()=>{
+        this.btn(isJa ? 'クリップボードにコピー' : isZh ? '复制到剪贴板' : 'Copy to clipboard','secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast(isJa ? 'コピーしました。' : 'Copied to the clipboard.','success');
+            Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制到剪贴板。' : 'Copied to the clipboard.','success');
             finish({action:'done_clipboard', saveState:'clipboard'});
           }catch{
-            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
+            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : isZh ? '复制到剪贴板失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
             const ok = this.downloadFile(fileName, output);
             if (ok){
               finish({action:'done_file', saveState:'file'});
             }else{
               try{
-                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : 'Copy failed. Copy the text manually from this prompt.', output);
+                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : isZh ? '复制失败。请从这个输入框手动复制文本。' : 'Copy failed. Copy the text manually from this prompt.', output);
               }catch{
-                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : 'Copy and save both failed.','warn', 3200);
+                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : isZh ? '复制和保存都失败了。' : 'Copy and save both failed.','warn', 3200);
               }
             }
           }
         }),
-        this.btn(isJa ? '保存' : 'Save file','primary', ()=>{
+        this.btn(isJa ? '保存' : isZh ? '保存文件' : 'Save file','primary', ()=>{
           const ok = this.downloadFile(fileName, output);
           finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
         })
@@ -404,11 +478,11 @@ fs.writeFileSync(unifiedFirefoxBodyPath, `${unifiedFirefox}\n`);
 NODE
 
 if command -v bunx >/dev/null 2>&1; then
-  bunx terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHROME_MIN}"
-  bunx terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
+  bunx terser "${TMP_MINIMAL_BODY}" --compress 'passes=5,toplevel=true,unsafe=true,pure_getters=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHROME_MIN}"
+  bunx terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=5,toplevel=true,unsafe=true,pure_getters=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
 else
-  npx --yes terser "${TMP_MINIMAL_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHROME_MIN}"
-  npx --yes terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=3,toplevel=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
+  npx --yes terser "${TMP_MINIMAL_BODY}" --compress 'passes=5,toplevel=true,unsafe=true,pure_getters=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_CHROME_MIN}"
+  npx --yes terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=5,toplevel=true,unsafe=true,pure_getters=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
 fi
 
 node - "${TMP_CHROME_MIN}" "${CHROME_BOOKMARKLET_OUT}" "${DOCS_CHROME_BOOKMARKLET_OUT}" "${TMP_FIREFOX_MIN}" "${FIREFOX_BOOKMARKLET_OUT}" "${DOCS_FIREFOX_BOOKMARKLET_OUT}" <<'NODE'

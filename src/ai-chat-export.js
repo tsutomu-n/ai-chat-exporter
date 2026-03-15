@@ -7,13 +7,20 @@ javascript:(async()=>{'use strict';
  */
 
 function normalizeLangId(lang){
-  return lang === 'ja' || lang === 'en' ? lang : null;
+  const raw = String(lang || '').trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'ja' || raw.startsWith('ja-')) return 'ja';
+  if (raw === 'en' || raw.startsWith('en-')) return 'en';
+  if (raw === 'zh-cn' || raw === 'zh' || raw.startsWith('zh-')) return 'zh-CN';
+  return null;
 }
 
 function detectPreferredLang(){
   try{
     const raw = String(navigator?.language || navigator?.languages?.[0] || '').toLowerCase();
-    return raw.startsWith('ja') ? 'ja' : 'en';
+    if (raw.startsWith('ja')) return 'ja';
+    if (raw.startsWith('zh')) return 'zh-CN';
+    return 'en';
   }catch{
     return 'en';
   }
@@ -32,6 +39,17 @@ function setRuntimeLang(lang){
 
 function isJapaneseLang(lang){
   return normalizeLangId(lang || getRuntimeLang()) === 'ja';
+}
+
+function isChineseLang(lang){
+  return normalizeLangId(lang || getRuntimeLang()) === 'zh-CN';
+}
+
+function pickLangText(jaText, enText, zhText, lang){
+  const resolved = normalizeLangId(lang || getRuntimeLang()) || 'en';
+  if (resolved === 'ja') return jaText;
+  if (resolved === 'zh-CN') return zhText;
+  return enText;
 }
 
 if (window.__AI_CHAT_EXPORT_RUNNING__) {
@@ -78,20 +96,20 @@ const FORMAT_DEFS = Object.freeze(ENABLE_OBSIDIAN_FORMAT ? {
 const FORMAT_ORDER = ENABLE_OBSIDIAN_FORMAT ? ['std', 'txt', 'obs', 'json'] : ['std', 'txt', 'json'];
 const FORMAT_TEXT = Object.freeze({
   std: Object.freeze({
-    label:{ja:'Markdown', en:'Markdown'},
-    hint:{ja:'読みやすい普通の.md', en:'Readable standard .md'}
+    label:{ja:'Markdown', en:'Markdown', 'zh-CN':'Markdown'},
+    hint:{ja:'読みやすい普通の.md', en:'Readable standard .md', 'zh-CN':'易读的标准 .md'}
   }),
   txt: Object.freeze({
-    label:{ja:'プレーンテキスト', en:'Plain text'},
-    hint:{ja:'装飾なしのテキスト', en:'Plain text without formatting'}
+    label:{ja:'プレーンテキスト', en:'Plain text', 'zh-CN':'纯文本'},
+    hint:{ja:'装飾なしのテキスト', en:'Plain text without formatting', 'zh-CN':'不带格式的纯文本'}
   }),
   json: Object.freeze({
-    label:{ja:'JSON', en:'JSON'},
-    hint:{ja:'機械処理向け', en:'Machine-readable export'}
+    label:{ja:'JSON', en:'JSON', 'zh-CN':'JSON'},
+    hint:{ja:'機械処理向け', en:'Machine-readable export', 'zh-CN':'适合机器处理的导出'}
   }),
   obs: Object.freeze({
-    label:{ja:'Obsidian向け', en:'For Obsidian'},
-    hint:{ja:'callout形式', en:'Callout format'}
+    label:{ja:'Obsidian向け', en:'For Obsidian', 'zh-CN':'用于 Obsidian'},
+    hint:{ja:'callout形式', en:'Callout format', 'zh-CN':'Callout 格式'}
   })
 });
 
@@ -159,7 +177,7 @@ class Utils{
   }
 
   static defaultConversationTitle(){
-    return isJapaneseLang() ? '会話' : 'Conversation';
+    return pickLangText('会話', 'Conversation', '对话');
   }
 
   static formatDateJST(d){
@@ -295,7 +313,7 @@ class MarkdownParser{
 
     // 画像
     if (tag === 'img'){
-      const imageFallback = isJapaneseLang() ? '画像' : 'Image';
+      const imageFallback = pickLangText('画像', 'Image', '图片');
       const alt = Utils.escapeMarkdownLinkLabel(el.getAttribute('alt') || imageFallback);
       const src = Utils.escapeMarkdownLinkDestination(el.getAttribute('src') || '');
       if (src) return `![${alt}](${src})`;
@@ -335,7 +353,7 @@ class MarkdownParser{
       case 'a': {
         const hrefRaw = el.getAttribute('href') || '';
         const href = Utils.escapeMarkdownLinkDestination(hrefRaw);
-        const label = Utils.escapeMarkdownLinkLabel(children.trim() || hrefRaw || (isJapaneseLang() ? 'リンク' : 'Link'));
+        const label = Utils.escapeMarkdownLinkLabel(children.trim() || hrefRaw || pickLangText('リンク', 'Link', '链接'));
         if (!href) return label;
         return `[${label}](${href})`;
       }
@@ -461,7 +479,7 @@ class PlainTextFormatter{
           const a = String(alt || '').trim();
           const u = String(url || '').trim();
           if (a && u) return `${a} (${u})`;
-          return a || u || (isJapaneseLang() ? '画像' : 'Image');
+          return a || u || pickLangText('画像', 'Image', '图片');
         })
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url)=>{
           const l = String(label || '').trim();
@@ -1491,8 +1509,18 @@ class App{
     return this.getLang() === 'ja';
   }
 
+  isChinese(){
+    return this.getLang() === 'zh-CN';
+  }
+
+  text(jaText, enText, zhText){
+    return pickLangText(jaText, enText, zhText, this.getLang());
+  }
+
   numberLocale(){
-    return this.isJapanese() ? 'ja-JP' : 'en-US';
+    if (this.isJapanese()) return 'ja-JP';
+    if (this.isChinese()) return 'zh-CN';
+    return 'en-US';
   }
 
   formatNumber(value){
@@ -1500,36 +1528,57 @@ class App{
   }
 
   formatCount(value){
-    return this.isJapanese() ? `${this.formatNumber(value)}件` : `${this.formatNumber(value)}`;
+    if (this.isJapanese()) return `${this.formatNumber(value)}件`;
+    if (this.isChinese()) return `${this.formatNumber(value)}条`;
+    return `${this.formatNumber(value)}`;
   }
 
   formatTimes(value){
-    return this.isJapanese() ? `${this.formatNumber(value)}回` : `${this.formatNumber(value)} times`;
+    if (this.isJapanese()) return `${this.formatNumber(value)}回`;
+    if (this.isChinese()) return `${this.formatNumber(value)}次`;
+    return `${this.formatNumber(value)} times`;
   }
 
   formatPoints(value){
-    return this.isJapanese() ? `${this.formatNumber(value)}点` : `${this.formatNumber(value)} pts`;
+    if (this.isJapanese()) return `${this.formatNumber(value)}点`;
+    if (this.isChinese()) return `${this.formatNumber(value)}分`;
+    return `${this.formatNumber(value)} pts`;
   }
 
   yesNo(value){
-    return this.isJapanese() ? (value ? 'はい' : 'いいえ') : (value ? 'Yes' : 'No');
+    if (this.isJapanese()) return value ? 'はい' : 'いいえ';
+    if (this.isChinese()) return value ? '是' : '否';
+    return value ? 'Yes' : 'No';
   }
 
   getSiteLabel(){
     return this.adapter.id === 'generic'
-      ? (this.isJapanese() ? '汎用' : 'Generic')
+      ? this.text('汎用', 'Generic', '通用')
       : this.adapter.label;
   }
 
   languageLabel(lang){
-    return lang === 'ja' ? '日本語' : 'English';
+    const resolved = normalizeLangId(lang);
+    if (resolved === 'ja') return '日本語';
+    if (resolved === 'zh-CN') return '中文';
+    return 'English';
   }
 
   languageDescription(lang){
+    const resolved = normalizeLangId(lang) || 'en';
     if (this.isJapanese()){
-      return lang === 'ja' ? '日本語UIと出力ラベル' : '英語UIと出力ラベル';
+      if (resolved === 'ja') return '日本語UIと出力ラベル';
+      if (resolved === 'zh-CN') return '中国語UIと出力ラベル';
+      return '英語UIと出力ラベル';
     }
-    return lang === 'ja' ? 'Japanese UI and output labels' : 'English UI and output labels';
+    if (this.isChinese()){
+      if (resolved === 'ja') return '日文界面与导出标签';
+      if (resolved === 'zh-CN') return '中文界面与导出标签';
+      return '英文界面与导出标签';
+    }
+    if (resolved === 'ja') return 'Japanese UI and output labels';
+    if (resolved === 'zh-CN') return 'Chinese UI and output labels';
+    return 'English UI and output labels';
   }
 
   storageKeys(){
@@ -1841,9 +1890,8 @@ class App{
   }
 
   getPresetLabelFor(preset){
-    if (this.isJapanese()){
-      return preset==='fast'?'はやい' : preset==='careful'?'ていねい' : 'ふつう';
-    }
+    if (this.isJapanese()) return preset==='fast'?'はやい' : preset==='careful'?'ていねい' : 'ふつう';
+    if (this.isChinese()) return preset==='fast'?'快速' : preset==='careful'?'细致' : '标准';
     return preset==='fast'?'Fast' : preset==='careful'?'Careful' : 'Normal';
   }
 
@@ -1855,6 +1903,11 @@ class App{
           `会話数: ${count}`,
           `取得モード: ${this.getPresetLabelFor(snapshot.preset)}`
         ]
+      : this.isChinese()
+      ? [
+          `消息数: ${count}`,
+          `运行模式: ${this.getPresetLabelFor(snapshot.preset)}`
+        ]
       : [
           `Messages: ${count}`,
           `Mode: ${this.getPresetLabelFor(snapshot.preset)}`
@@ -1863,6 +1916,8 @@ class App{
       lines.push(
         this.isJapanese()
           ? `判定: ${snapshot.quality.status || 'WARN'}（${this.formatPoints(snapshot.quality.score ?? 0)}）`
+          : this.isChinese()
+          ? `状态: ${snapshot.quality.status || 'WARN'}（${this.formatPoints(snapshot.quality.score ?? 0)}）`
           : `Status: ${snapshot.quality.status || 'WARN'} (${this.formatPoints(snapshot.quality.score ?? 0)})`
       );
     }
@@ -1878,11 +1933,11 @@ class App{
         preset: current?.preset || this.config.preset,
         alternateSnapshot: alternate,
         alternateTitle: showingPrimary
-          ? (this.isJapanese() ? '再実行前の結果を保持中' : 'Previous result kept')
-          : (this.isJapanese() ? '今回の再取得結果も保持中' : 'Current result kept'),
+          ? this.text('再実行前の結果を保持中', 'Previous result kept', '已保留重试前的结果')
+          : this.text('今回の再取得結果も保持中', 'Current result kept', '也保留了本次重新提取的结果'),
         alternateButtonLabel: showingPrimary
-          ? (this.isJapanese() ? '前回結果を見る' : 'View previous result')
-          : (this.isJapanese() ? '今回結果を見る' : 'View current result')
+          ? this.text('前回結果を見る', 'View previous result', '查看上一次结果')
+          : this.text('今回結果を見る', 'View current result', '查看当前结果')
       });
       if (result?.action==='show_alternate_result' && alternate){
         const previousCurrent = current;
@@ -1986,6 +2041,7 @@ class App{
   async showConfigDialog(){
     return new Promise(resolve=>{
       const isJa = this.isJapanese();
+      const isZh = this.isChinese();
       const rerender = ()=>{
         ov.remove();
         this.showConfigDialog().then(resolve);
@@ -1994,12 +2050,12 @@ class App{
       const modal = Utils.el('div',{style:`width:min(640px, calc(100vw - 32px));background:${THEME.surface};border:1px solid ${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:${THEME.fg};`});
 
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
-        Utils.el('div',{text:isJa ? 'AIチャットを書き出す' : 'Export AI chat',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
-        Utils.el('div',{text:isJa ? `サイト: ${this.getSiteLabel()}` : `Site: ${this.getSiteLabel()}`,style:`font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:600;`})
+        Utils.el('div',{text:this.text('AIチャットを書き出す', 'Export AI chat', '导出 AI 对话'),style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
+        Utils.el('div',{text:this.text(`サイト: ${this.getSiteLabel()}`, `Site: ${this.getSiteLabel()}`, `站点: ${this.getSiteLabel()}`),style:`font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:600;`})
       ]);
 
       const body = Utils.el('div',{style:'padding:18px 22px;'});
-      body.appendChild(this.sectionTitle(isJa ? '言語' : 'Language'));
+      body.appendChild(this.sectionTitle(this.text('言語', 'Language', '语言')));
       const langWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
       const langBtn = (lang)=>{
         const active = this.getLang()===lang;
@@ -2015,10 +2071,10 @@ class App{
         });
         return btn;
       };
-      langWrap.append(langBtn('en'), langBtn('ja'));
+      langWrap.append(langBtn('en'), langBtn('ja'), langBtn('zh-CN'));
       body.appendChild(langWrap);
 
-      body.appendChild(this.sectionTitle(isJa ? '速度プリセット' : 'Mode'));
+      body.appendChild(this.sectionTitle(this.text('速度プリセット', 'Mode', '运行模式')));
       const presetWrap = Utils.el('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;'});
       const presetCard = (id, title, desc)=>{
         const active = this.config.preset===id;
@@ -2035,9 +2091,9 @@ class App{
         return card;
       };
       presetWrap.append(
-        presetCard('fast',this.getPresetLabelFor('fast'),isJa ? '短い会話向き。最速・展開なし' : 'Best for short chats. No expansion.'),
-        presetCard('normal',this.getPresetLabelFor('normal'),isJa ? '既定。普段使い向け' : 'Default. Good for most chats.'),
-        presetCard('careful',this.getPresetLabelFor('careful'),isJa ? '長い会話向き。先頭追い込みあり' : 'Best for long chats. Scrolls more to reach the top.')
+        presetCard('fast',this.getPresetLabelFor('fast'),this.text('短い会話向き。最速・展開なし', 'Best for short chats. No expansion.', '适合短对话。最快，不展开内容。')),
+        presetCard('normal',this.getPresetLabelFor('normal'),this.text('既定。普段使い向け', 'Default. Good for most chats.', '默认。适合大多数对话。')),
+        presetCard('careful',this.getPresetLabelFor('careful'),this.text('長い会話向き。先頭追い込みあり', 'Best for long chats. Scrolls more to reach the top.', '适合长对话。会更多滚动以到达顶部。'))
       );
       body.appendChild(presetWrap);
 
@@ -2049,14 +2105,14 @@ class App{
       expandRow.append(
         cb,
         Utils.el('div',{},[
-          Utils.el('div',{text:isJa ? '本文の「続きを読む」等を自動で開く' : 'Auto-expand “Show more” buttons',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
-          Utils.el('div',{text:isJa ? '漏れ対策に効きます。誤爆しないよう安全側に制限しています。' : 'Helps avoid missing content. Uses safe clicks to avoid mistakes.',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+          Utils.el('div',{text:this.text('本文の「続きを読む」等を自動で開く', 'Auto-expand “Show more” buttons', '自动展开“显示更多”等按钮'),style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
+          Utils.el('div',{text:this.text('漏れ対策に効きます。誤爆しないよう安全側に制限しています。', 'Helps avoid missing content. Uses safe clicks to avoid mistakes.', '有助于减少漏抓内容。会尽量使用更安全的点击方式。'),style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
         ])
       );
       body.appendChild(expandRow);
 
       // 形式
-      body.appendChild(this.sectionTitle(isJa ? '保存形式' : 'Save format'));
+      body.appendChild(this.sectionTitle(this.text('保存形式', 'Save format', '保存格式')));
       const fmtWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
       const fmtBtn = (id, def)=>{
         const active = this.getFormatId()===id;
@@ -2082,8 +2138,8 @@ class App{
         txtRow.append(
           txtHeaderCb,
           Utils.el('div',{},[
-            Utils.el('div',{text:isJa ? '会話ヘッダーを付ける' : 'Include conversation header',style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
-            Utils.el('div',{text:isJa ? 'タイトル、保存日時、URL、品質判定を先頭に入れます。本文だけ欲しい場合は外してください。' : 'Adds the title, time, URL, and quality summary above the text. Turn this off if you want only the conversation text.',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+            Utils.el('div',{text:this.text('会話ヘッダーを付ける', 'Include conversation header', '包含对话头部信息'),style:'font-weight:700;font-size:14px;line-height:1.5;margin-bottom:4px;'}),
+            Utils.el('div',{text:this.text('タイトル、保存日時、URL、品質判定を先頭に入れます。本文だけ欲しい場合は外してください。', 'Adds the title, time, URL, and quality summary above the text. Turn this off if you want only the conversation text.', '会在正文前加入标题、保存时间、URL 和质量状态。如果只想保留正文，请关闭。'),style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
           ])
         );
         body.appendChild(txtRow);
@@ -2091,37 +2147,37 @@ class App{
 
       // 詳細
       const details = Utils.el('details',{style:`margin-top:14px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-      const sum = Utils.el('summary',{text:isJa ? '細かく調整する' : 'Advanced settings',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`});
+      const sum = Utils.el('summary',{text:this.text('細かく調整する', 'Advanced settings', '高级设置'),style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`});
       const inner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
       const slider = (label, key, min, max, step, unit)=>{
         const row = Utils.el('div',{style:'display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;'});
         const left = Utils.el('div',{},[
           Utils.el('div',{text:label,style:'font-weight:700;font-size:14px;line-height:1.5;'}),
-          Utils.el('div',{text:isJa ? `現在: ${this.config[key]}${unit}` : `Current: ${this.config[key]}${unit}`,style:`font-size:14px;line-height:1.6;color:${THEME.muted};margin-top:2px;font-weight:500;`})
+          Utils.el('div',{text:this.text(`現在: ${this.config[key]}${unit}`, `Current: ${this.config[key]}${unit}`, `当前: ${this.config[key]}${unit}`),style:`font-size:14px;line-height:1.6;color:${THEME.muted};margin-top:2px;font-weight:500;`})
         ]);
         const input = Utils.el('input',{type:'range',min:String(min),max:String(max),step:String(step),value:String(this.config[key]),style:'width:220px;'});
         input.addEventListener('input', ()=>{
           this.config[key]=Number(input.value);
           this.saveConfig();
-          left.querySelectorAll('div')[1].textContent = isJa ? `現在: ${this.config[key]}${unit}` : `Current: ${this.config[key]}${unit}`;
+          left.querySelectorAll('div')[1].textContent = this.text(`現在: ${this.config[key]}${unit}`, `Current: ${this.config[key]}${unit}`, `当前: ${this.config[key]}${unit}`);
         });
         row.append(left, input);
         return row;
       };
       inner.append(
-        slider(isJa ? '各方向の最大スクロール回数' : 'Max scroll rounds per direction','scrollMax', 10, 220, 2, isJa ? '回' : ''),
-        slider(isJa ? '待ち時間' : 'Delay between rounds','scrollDelay', 120, 1200, 20, 'ms'),
-        slider(isJa ? '展開クリック上限' : 'Max auto-expands','expandMaxClicks', 0, 600, 10, isJa ? '回' : ''),
-        slider(isJa ? '展開クリック間隔' : 'Auto-expand interval','expandClickDelay', 80, 600, 10, 'ms'),
-        Utils.el('div',{text:isJa ? '※ プリセットを選ぶと、ここは上書きされます（必要なら再調整してください）。' : '* Choosing a preset overwrites these values. Adjust again afterward if needed.',style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
+        slider(this.text('各方向の最大スクロール回数', 'Max scroll rounds per direction', '每个方向的最大滚动轮数'),'scrollMax', 10, 220, 2, isJa ? '回' : isZh ? '轮' : ''),
+        slider(this.text('待ち時間', 'Delay between rounds', '每轮之间的等待时间'),'scrollDelay', 120, 1200, 20, 'ms'),
+        slider(this.text('展開クリック上限', 'Max auto-expands', '自动展开上限'),'expandMaxClicks', 0, 600, 10, isJa ? '回' : isZh ? '次' : ''),
+        slider(this.text('展開クリック間隔', 'Auto-expand interval', '自动展开间隔'),'expandClickDelay', 80, 600, 10, 'ms'),
+        Utils.el('div',{text:this.text('※ プリセットを選ぶと、ここは上書きされます（必要なら再調整してください）。', '* Choosing a preset overwrites these values. Adjust again afterward if needed.', '选择预设后，这些值会被覆盖。需要的话请再调整。'),style:`font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`})
       );
       details.append(sum, inner);
       body.appendChild(details);
 
       const footer = Utils.el('div',{style:`padding:16px 22px;background:${THEME.bg};border-top:1px solid ${THEME.border};display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;`});
       footer.append(
-        this.btn(isJa ? 'キャンセル' : 'Cancel','subtle', ()=>{ ov.remove(); resolve(false); }),
-        this.btn(isJa ? '開始' : 'Start','primary', ()=>{ ov.remove(); resolve(true); })
+        this.btn(this.text('キャンセル', 'Cancel', '取消'),'subtle', ()=>{ ov.remove(); resolve(false); }),
+        this.btn(this.text('開始', 'Start', '开始'),'primary', ()=>{ ov.remove(); resolve(true); })
       );
 
       modal.append(header, body, footer);
@@ -2281,10 +2337,10 @@ class App{
   }
 
   roleLabel(role){
-    if (role==='User') return this.isJapanese() ? 'あなた' : 'You';
+    if (role==='User') return this.isJapanese() ? 'あなた' : this.isChinese() ? '你' : 'You';
     if (role==='Model') return 'AI';
-    if (role==='Tool') return this.isJapanese() ? 'ツール' : 'Tool';
-    return this.isJapanese() ? '不明' : 'Unknown';
+    if (role==='Tool') return this.isJapanese() ? 'ツール' : this.isChinese() ? '工具' : 'Tool';
+    return this.isJapanese() ? '不明' : this.isChinese() ? '未知' : 'Unknown';
   }
 
   yamlValue(v){
@@ -2329,21 +2385,23 @@ class App{
     const hasWarning = qWarn || diffWarn;
     const parts = [];
     if (!diff?.previous && (diff?.lastAttempt?.status==='aborted' || diff?.lastAttempt?.status==='cancel')){
-      parts.push(this.isJapanese() ? '前回は保存されず中断' : 'previous run aborted before saving');
+      parts.push(this.text('前回は保存されず中断', 'previous run aborted before saving', '上一次运行在保存前中断'));
     } else if (!diff?.previous){
-      parts.push(this.isJapanese() ? '前回データなし' : 'no previous data');
+      parts.push(this.text('前回データなし', 'no previous data', '没有上一次数据'));
     }
     if (qWarn){
       parts.push(this.isJapanese()
         ? (q.status==='WARN' ? 'やや不安' : '要再実行')
+        : this.isChinese()
+        ? (q.status==='WARN' ? '需要快速检查' : '建议重新运行')
         : (q.status==='WARN' ? 'needs a quick check' : 'rerun recommended'));
     }
     if (diffWarn){
-      parts.push(this.isJapanese() ? '前回との差が大きい' : 'large delta from previous');
+      parts.push(this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大'));
     }
     const text = hasWarning
       ? Array.from(new Set(parts)).join(' / ')
-      : (this.isJapanese() ? 'なし' : 'none');
+      : this.text('なし', 'none', '无');
     return {hasWarning, text};
   }
 
@@ -2357,6 +2415,12 @@ class App{
           `抽出件数: ${this.formatCount(messages.length)}`,
           `保存状態: ${savedState}`,
           `警告有無: ${qWarn.hasWarning?'あり':'なし'}${warningTail}`
+        ]
+      : this.isChinese()
+      ? [
+          `已提取: ${this.formatCount(messages.length)}`,
+          `保存状态: ${savedState}`,
+          `警告: ${qWarn.hasWarning?'有':'无'}${warningTail}`
         ]
       : [
           `Extracted: ${this.formatNumber(messages.length)} messages`,
@@ -2671,12 +2735,14 @@ class App{
       if (this.isTxtHeaderEnabled()){
         out += this.isJapanese()
           ? `${title}\n\n- 形式: ${formatDef.label}\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${this.formatNumber(messages.length)}\n- 品質判定: ${metadata.quality_status} (${this.formatPoints(metadata.quality_score)})\n- 警告: ${metadata.warning_text}\n\n================\n\n`
+          : this.isChinese()
+          ? `${title}\n\n- 格式: ${formatDef.label}\n- 站点: ${site}\n- 保存时间: ${savedAt}\n- URL: ${url}\n- 消息数: ${this.formatNumber(messages.length)}\n- 质量状态: ${metadata.quality_status} (${this.formatPoints(metadata.quality_score)})\n- 警告: ${metadata.warning_text}\n\n================\n\n`
           : `${title}\n\n- Format: ${formatDef.label}\n- Site: ${site}\n- Saved at: ${savedAt}\n- URL: ${url}\n- Messages: ${this.formatNumber(messages.length)}\n- Quality: ${metadata.quality_status} (${this.formatPoints(metadata.quality_score)})\n- Warning: ${metadata.warning_text}\n\n================\n\n`;
       }
       for (let i=0;i<messages.length;i++){
         const m = messages[i];
         const body = PlainTextFormatter.fromMarkdown(m.content || '');
-        out += `${this.roleLabel(m.role)}:\n${body || (this.isJapanese() ? '(空)' : '(empty)')}\n\n`;
+        out += `${this.roleLabel(m.role)}:\n${body || this.text('(空)', '(empty)', '(空)')}\n\n`;
         if (i < messages.length-1) out += `----------------\n\n`;
       }
       return {fileName:this.makeFileName(title), output: out.trim()+'\n'};
@@ -2686,13 +2752,15 @@ class App{
       out += yaml;
       out += this.isJapanese()
         ? `# ${title}\n\n- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n\n---\n\n`
+        : this.isChinese()
+        ? `# ${title}\n\n- 站点: ${site}\n- 保存时间: ${savedAt}\n- URL: ${url}\n\n---\n\n`
         : `# ${title}\n\n- Site: ${site}\n- Saved at: ${savedAt}\n- URL: ${url}\n\n---\n\n`;
       for (const m of messages){
         const callout = (m.role==='User')
           ? `[!NOTE] ${this.roleLabel('User')}`
           : (m.role==='Model'
               ? '[!TIP] AI'
-              : `[!INFO] ${this.isJapanese() ? 'その他' : 'Other'}`);
+              : `[!INFO] ${this.text('その他', 'Other', '其他')}`);
         const body = (m.content||'').replace(/\n/g,'\n> ');
         out += `> ${callout}\n> ${body}\n\n`;
       }
@@ -2704,6 +2772,8 @@ class App{
     out += `# ${title}\n\n`;
     out += this.isJapanese()
       ? `- サイト: ${site}\n- 保存日時: ${savedAt}\n- URL: ${url}\n- 会話数: ${this.formatNumber(messages.length)}\n\n---\n\n`
+      : this.isChinese()
+      ? `- 站点: ${site}\n- 保存时间: ${savedAt}\n- URL: ${url}\n- 消息数: ${this.formatNumber(messages.length)}\n\n---\n\n`
       : `- Site: ${site}\n- Saved at: ${savedAt}\n- URL: ${url}\n- Messages: ${this.formatNumber(messages.length)}\n\n---\n\n`;
     for (let i=0;i<messages.length;i++){
       const m = messages[i];
@@ -2733,9 +2803,10 @@ class App{
   async showResultDialog(messages, quality, options={}){
     return new Promise(resolve=>{
       const isJa = this.isJapanese();
+      const isZh = this.isChinese();
       const alternateSnapshot = options?.alternateSnapshot || null;
-      const alternateTitle = options?.alternateTitle || (isJa ? '保持中の結果' : 'Saved alternate result');
-      const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '別の結果を見る' : 'View alternate result');
+      const alternateTitle = options?.alternateTitle || this.text('保持中の結果', 'Saved alternate result', '已保留的另一份结果');
+      const alternateButtonLabel = options?.alternateButtonLabel || this.text('別の結果を見る', 'View alternate result', '查看另一份结果');
       const resultPreset = options?.preset || this.config.preset;
       const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
@@ -2749,14 +2820,15 @@ class App{
 
       const header = Utils.el('div',{style:`padding:20px 22px;background:${THEME.bg};border-bottom:1px solid ${THEME.border};`},[
         Utils.el('div',{text:isJa ? '保存前の確認' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
-        Utils.el('div',{text:isJa ? `判定: ${summary.label}（${this.formatPoints(summary.score)}）` : `Status: ${summary.label} (${this.formatPoints(summary.score)})`,style:`font-size:14px;line-height:1.6;color:${summary.color};font-weight:700;`}),
+        Utils.el('div',{text:this.text('保存前の確認', 'Review before saving', '保存前确认'),style:'font-size:20px;line-height:1.35;font-weight:700;margin-bottom:6px;'}),
+        Utils.el('div',{text:isJa ? `判定: ${summary.label}（${this.formatPoints(summary.score)}）` : isZh ? `状态: ${summary.label}（${this.formatPoints(summary.score)}）` : `Status: ${summary.label} (${this.formatPoints(summary.score)})`,style:`font-size:14px;line-height:1.6;color:${summary.color};font-weight:700;`}),
         Utils.el('div',{text:summary.hint,style:`margin-top:6px;font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`}),
         summary.diffLine ? Utils.el('div',{text:summary.diffLine,style:`margin-top:6px;font-size:14px;line-height:1.65;color:${THEME.muted};font-weight:500;`}) : null
       ].filter(Boolean));
 
       const body = Utils.el('div',{style:'padding:18px 22px;'});
       const compact = Utils.el('div',{style:'display:grid;gap:6px;padding:12px;border-radius:12px;border:1px solid '+THEME.border+';background:'+THEME.bg+';margin-bottom:12px;font-size:14px;line-height:1.55;font-weight:500;'});
-      let saveState = isJa ? '未保存' : 'Not saved';
+      let saveState = this.text('未保存', 'Not saved', '未保存');
       const renderCompact = () => {
         compact.textContent = '';
         const lines = this.compactSummaryLines(messages, quality, diff, saveState);
@@ -2774,19 +2846,19 @@ class App{
       const grid = Utils.el('div',{style:'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;'});
       const baseLabel = this.comparisonBaseLabel(diff);
       const diffChip = (()=>{
-        if (!diff.previous) return this.chip(isJa ? '前回' : 'Previous', isJa ? 'なし' : 'None', THEME.muted);
+        if (!diff.previous) return this.chip(this.text('前回', 'Previous', '上一次'), this.text('なし', 'None', '无'), THEME.muted);
         const sign = diff.diff>0?'+':'';
         const ratePct = Math.round((diff.rate||0)*100);
-        const txt = isJa ? `${sign}${this.formatCount(diff.diff)} (${ratePct}%)` : `${sign}${this.formatNumber(diff.diff)} (${ratePct}%)`;
+        const txt = isJa ? `${sign}${this.formatCount(diff.diff)} (${ratePct}%)` : isZh ? `${sign}${this.formatCount(diff.diff)} (${ratePct}%)` : `${sign}${this.formatNumber(diff.diff)} (${ratePct}%)`;
         const col = diff.stable ? THEME.ok : (ratePct>=12 ? THEME.bad : THEME.warn);
-        return this.chip(isJa ? '前回比' : 'Delta', txt, col);
+        return this.chip(this.text('前回比', 'Delta', '与上次相比'), txt, col);
       })();
 
       grid.append(
-        this.chip(isJa ? '会話数' : 'Messages', isJa ? this.formatCount(messages.length) : this.formatNumber(messages.length)),
-        this.chip(isJa ? '比較' : 'Compare', baseLabel),
-        this.chip(isJa ? '速度' : 'Mode', this.getPresetLabelFor(resultPreset)),
-        this.chip(isJa ? '形式' : 'Format', this.getFormatLabel()),
+        this.chip(this.text('会話数', 'Messages', '消息数'), isJa || isZh ? this.formatCount(messages.length) : this.formatNumber(messages.length)),
+        this.chip(this.text('比較', 'Compare', '比较'), baseLabel),
+        this.chip(this.text('速度', 'Mode', '运行模式'), this.getPresetLabelFor(resultPreset)),
+        this.chip(this.text('形式', 'Format', '格式'), this.getFormatLabel()),
         diffChip
       );
       body.appendChild(grid);
@@ -2813,7 +2885,7 @@ class App{
       // 詳細（品質）
       if (quality){
         const detail = Utils.el('details',{style:`margin-top:12px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-        detail.appendChild(Utils.el('summary',{text:isJa ? 'くわしい判定を見る' : 'Show quality details',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
+        detail.appendChild(Utils.el('summary',{text:this.text('くわしい判定を見る', 'Show quality details', '查看质量详情'),style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
         const detailInner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
         const userSummary = Utils.el('div',{style:'display:grid;gap:6px;'});
         for (const line of this.buildQualityUserSummaryLines(quality)){
@@ -2822,7 +2894,7 @@ class App{
         detailInner.appendChild(userSummary);
 
         const seDetail = Utils.el('details',{style:`border:1px solid ${THEME.border};border-radius:12px;background:${THEME.surface};overflow:hidden;`});
-        seDetail.appendChild(Utils.el('summary',{text:isJa ? 'SE向け詳細を見る' : 'Show technical details',style:`cursor:pointer;list-style:none;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.5;color:${THEME.muted};`}));
+        seDetail.appendChild(Utils.el('summary',{text:this.text('SE向け詳細を見る', 'Show technical details', '查看技术详情'),style:`cursor:pointer;list-style:none;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.5;color:${THEME.muted};`}));
         seDetail.appendChild(Utils.el('pre',{text:this.buildQualityDetailText(quality),style:`margin:0;padding:12px;border-top:1px solid ${THEME.border};white-space:pre-wrap;word-break:break-word;font:12px/1.6 ${THEME.mono};color:${THEME.muted};`}));
         detailInner.appendChild(seDetail);
 
@@ -2832,14 +2904,14 @@ class App{
 
       // 保存予定ファイル名
       const fileBox = Utils.el('div',{style:`margin-top:12px;padding:12px 14px;border-radius:14px;border:1px solid ${THEME.border};background:${THEME.bg};display:grid;gap:10px;`});
-      fileBox.appendChild(Utils.el('div',{text:isJa ? '保存されるファイル名' : 'Output file name',style:`font-size:14px;line-height:1.55;color:${THEME.muted};font-weight:700;`}));
+      fileBox.appendChild(Utils.el('div',{text:this.text('保存されるファイル名', 'Output file name', '输出文件名'),style:`font-size:14px;line-height:1.55;color:${THEME.muted};font-weight:700;`}));
       const fileInput = Utils.el('input',{
         type:'text',
         value:fileName,
         spellcheck:'false',
         style:`width:100%;border-radius:12px;border:1px solid ${THEME.border};background:${THEME.surface};color:${THEME.fg};padding:10px 12px;font:600 14px/1.5 ${THEME.font};`
       });
-      const fileHint = Utils.el('div',{text:isJa ? `出力サイズ: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)` : `Output size: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)`,style:`font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`});
+      const fileHint = Utils.el('div',{text:isJa ? `出力サイズ: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)` : isZh ? `输出大小: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)` : `Output size: ${this.formatByteSize(byteSize)} (${byteSize.toLocaleString(this.numberLocale())} bytes)`,style:`font-size:13px;line-height:1.6;color:${THEME.muted};font-weight:500;`});
       fileInput.addEventListener('input', ()=>{
         currentFileName = this.normalizeDownloadFileName(fileInput.value, fileName);
       });
@@ -2852,21 +2924,21 @@ class App{
 
       // 手動コピー欄
       const manual = Utils.el('details',{style:`margin-top:12px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.bg};overflow:hidden;`});
-      manual.appendChild(Utils.el('summary',{text:isJa ? '手動コピー欄（コピーできない時用）' : 'Manual copy',style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
+      manual.appendChild(Utils.el('summary',{text:this.text('手動コピー欄（コピーできない時用）', 'Manual copy', '手动复制'),style:`cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5;`}));
       const manInner = Utils.el('div',{style:'padding:12px 14px;border-top:1px solid '+THEME.border+';display:grid;gap:10px;'});
       const ta = Utils.el('textarea',{style:`width:100%;min-height:180px;border-radius:12px;border:1px solid ${THEME.border};background:${THEME.surface};color:${THEME.fg};padding:10px 12px;font:500 14px/1.65 ${THEME.mono};`, spellcheck:'false'});
       ta.value = output;
       const manBtns = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;'});
       const selectAll = ()=>{ ta.focus(); ta.select(); try{ ta.setSelectionRange(0, ta.value.length);}catch{} };
       manBtns.append(
-        this.btn(isJa ? '全選択' : 'Select all','secondary', ()=>{ selectAll(); Utils.toast(isJa ? '全選択しました。Ctrl/Cmd+Cでコピーできます。' : 'Selected all. Press Ctrl/Cmd+C to copy.', 'info'); }),
-        this.btn(isJa ? 'コピー（可能なら）' : 'Copy from this area','secondary', async ()=>{
+        this.btn(this.text('全選択', 'Select all', '全选'),'secondary', ()=>{ selectAll(); Utils.toast(this.text('全選択しました。Ctrl/Cmd+Cでコピーできます。', 'Selected all. Press Ctrl/Cmd+C to copy.', '已全选。请按 Ctrl/Cmd+C 复制。'), 'info'); }),
+        this.btn(this.text('コピー（可能なら）', 'Copy from this area', '从这里复制'),'secondary', async ()=>{
           selectAll();
           try{
             await navigator.clipboard.writeText(ta.value);
-            Utils.toast(isJa ? 'クリップボードにコピーしました。' : 'Copied to the clipboard.', 'success');
+            Utils.toast(this.text('クリップボードにコピーしました。', 'Copied to the clipboard.', '已复制到剪贴板。'), 'success');
           }catch{
-            Utils.toast(isJa ? 'コピーできませんでした。全選択済みなので手動でコピーしてください。' : 'Copy failed. The text is selected, so copy it manually.', 'warn', 3500);
+            Utils.toast(this.text('コピーできませんでした。全選択済みなので手動でコピーしてください。', 'Copy failed. The text is selected, so copy it manually.', '复制失败。文本已全选，请手动复制。'), 'warn', 3500);
           }
         })
       );
@@ -2882,41 +2954,41 @@ class App{
       };
 
       const finalizeWithState = async (action, state, nextStateMs=220) => {
-        setSaveState(state || (isJa ? '保存状態更新中' : 'Updating save state'));
+        setSaveState(state || this.text('保存状態更新中', 'Updating save state', '正在更新保存状态'));
         await Utils.sleep(nextStateMs);
         finish(action);
       };
 
       const footerButtons = [
-        this.btn(isJa ? '中止' : 'Cancel','subtle', ()=>finish({action:'cancel'})),
+        this.btn(this.text('中止', 'Cancel', '取消'),'subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn(isJa ? 'ていねいに再実行' : 'Rerun carefully','secondary', async ()=>{
+        this.btn(this.text('ていねいに再実行', 'Rerun carefully', '细致重试'),'secondary', async ()=>{
           const ok = await this.confirmRerunDialog('careful');
           if (ok) finish({action:'rerun_careful'});
         }),
-        this.btn(isJa ? 'クリップボードにコピー' : 'Copy to clipboard','secondary', async ()=>{
+        this.btn(this.text('クリップボードにコピー', 'Copy to clipboard', '复制到剪贴板'),'secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast(isJa ? 'クリップボードにコピーしました。' : 'Copied to the clipboard.', 'success');
-            await finalizeWithState({action:'done_clipboard', saveState:'clipboard'}, isJa ? 'クリップボード保存済み' : 'Saved to clipboard');
+            Utils.toast(this.text('クリップボードにコピーしました。', 'Copied to the clipboard.', '已复制到剪贴板。'), 'success');
+            await finalizeWithState({action:'done_clipboard', saveState:'clipboard'}, this.text('クリップボード保存済み', 'Saved to clipboard', '已保存到剪贴板'));
           }catch{
-            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : 'Clipboard copy failed, switching to file save.', 'warn', 3200);
+            Utils.toast(this.text('コピーできなかったため、ファイル保存に切り替えます。', 'Clipboard copy failed, switching to file save.', '复制到剪贴板失败，改为保存文件。'), 'warn', 3200);
             const ok = this.downloadFile(currentFileName, output);
             if (ok){
-              await finalizeWithState({action:'done_file', saveState:'file'}, isJa ? 'ファイル保存済み' : 'Saved as file');
+              await finalizeWithState({action:'done_file', saveState:'file'}, this.text('ファイル保存済み', 'Saved as file', '已保存为文件'));
             }else{
-              setSaveState(isJa ? 'コピー/保存に失敗' : 'Copy/save failed');
-              Utils.toast(isJa ? '保存に失敗しました。' : 'Save failed.', 'error', 2200);
+              setSaveState(this.text('コピー/保存に失敗', 'Copy/save failed', '复制/保存失败'));
+              Utils.toast(this.text('保存に失敗しました。', 'Save failed.', '保存失败。'), 'error', 2200);
               finish({action:'done_fail', saveState:'failed'});
             }
           }
         }),
-        this.btn(isJa ? '保存（ファイル）' : 'Save file','primary', ()=>{
+        this.btn(this.text('保存（ファイル）', 'Save file', '保存文件'),'primary', ()=>{
           const ok = this.downloadFile(currentFileName, output);
           if (ok){
-            finalizeWithState({action:'done_file', saveState:'file'}, isJa ? 'ファイル保存済み' : 'Saved as file');
+            finalizeWithState({action:'done_file', saveState:'file'}, this.text('ファイル保存済み', 'Saved as file', '已保存为文件'));
           }else{
-            setSaveState(isJa ? '保存失敗' : 'Save failed');
+            setSaveState(this.text('保存失敗', 'Save failed', '保存失败'));
             finish({action:'done_fail', saveState:'failed'});
           }
         })
