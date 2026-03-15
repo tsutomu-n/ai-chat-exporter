@@ -2278,34 +2278,44 @@ class App{
     }
     if (this.isChinese()){
       if (status==='PASS') return '良好';
-      if (status==='WARN') return '需要快速检查';
-      return '建议重新运行';
+      if (status==='WARN') return compact ? '快速检查' : '需要快速检查';
+      return compact ? '建议重试' : '建议重新运行';
     }
     if (status==='PASS') return compact ? 'Good' : 'Looks good';
     if (status==='WARN') return compact ? 'Review' : 'Needs a quick check';
     return compact ? 'Rerun' : 'Rerun recommended';
   }
 
-  qualityHintText(status){
+  qualityHintText(status, compact=false){
     if (status==='PASS'){
       return this.isJapanese()
-        ? '概ね問題なさそうです。'
+        ? (compact ? '保存できそうです。' : '概ね問題なさそうです。')
         : this.isChinese()
-        ? '看起来可以保存。'
-        : 'The result looks stable enough to save.';
+        ? (compact ? '可保存。' : '看起来可以保存。')
+        : (compact ? 'Ready to save.' : 'The result looks stable enough to save.');
     }
     if (status==='WARN'){
       return this.isJapanese()
-        ? '会話が長い場合は、もう一度実行すると安定することがあります。'
+        ? (compact ? '必要なら再実行。' : '会話が長い場合は、もう一度実行すると安定することがあります。')
         : this.isChinese()
-        ? '如果聊天很长，重新运行一次可能会更稳定。'
-        : 'If the chat is long, rerunning once may improve stability.';
+        ? (compact ? '较长时可重试一次。' : '如果聊天很长，重新运行一次可能会更稳定。')
+        : (compact ? 'Rerun if needed.' : 'If the chat is long, rerunning once may improve stability.');
     }
     return this.isJapanese()
-      ? '取得漏れの可能性が高いです。もう一度実行を推奨します。'
+      ? (compact ? '再実行推奨です。' : '取得漏れの可能性が高いです。もう一度実行を推奨します。')
       : this.isChinese()
-      ? '可能有内容缺失。建议保存前重新运行。'
-      : 'Missing content is likely. Rerun before saving.';
+      ? (compact ? '可能缺失，建议重试。' : '可能有内容缺失。建议保存前重新运行。')
+      : (compact ? 'Rerun recommended.' : 'Missing content is likely. Rerun before saving.');
+  }
+
+  largeDeltaHintText(compact=false){
+    if (this.isJapanese()) return '前回との差が大きいです。';
+    if (this.isChinese()) return compact ? '与上次差异大。' : '与上一次的差异较大，滚动可能过早停止了。';
+    return compact ? 'Large delta from previous.' : 'The difference from the previous result is large. Scrolling may have stopped early.';
+  }
+
+  largeDeltaLabelText(){
+    return this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大');
   }
 
   qualitySummary(quality, diff){
@@ -2313,7 +2323,7 @@ class App{
     const q = quality || {status:'WARN', score:0};
     const label = this.qualityStatusText(q.status, false);
     const color = q.status==='PASS'?THEME.ok : q.status==='WARN'?THEME.warn : THEME.bad;
-    let hint = this.qualityHintText(q.status);
+    let hint = this.qualityHintText(q.status, false);
 
     if ((q.weakIdentityMessages||0) > 0 && !q.identityStable){
       hint = this.isJapanese()
@@ -2340,11 +2350,7 @@ class App{
         ? `${diff.previousLabel || '上一次'}: ${this.formatCount(diff.previous.count)} / 本次: ${this.formatCount(diff.now.count)}（差值 ${sign}${this.formatCount(diff.diff)}）`
         : `${diff.previousLabel || 'Previous'}: ${this.formatNumber(diff.previous.count)} / Current: ${this.formatNumber(diff.now.count)} (delta ${sign}${this.formatNumber(diff.diff)})`;
       if (!diff.stable && diff.rate>=0.12){
-        hint = this.isJapanese()
-          ? '前回との差が大きいです。スクロールが途中で止まった可能性があります。'
-          : this.isChinese()
-          ? '与上一次的差异较大，滚动可能过早停止了。'
-          : 'The difference from the previous result is large. Scrolling may have stopped early.';
+        hint = this.largeDeltaHintText(false);
       } else if (diff.digestSame){
         hint = this.isJapanese()
           ? '前回とほぼ同じ内容です（安定）。'
@@ -2450,10 +2456,11 @@ class App{
       parts.push(this.text('前回データなし', 'no previous data', '没有上一次数据'));
     }
     if (qWarn){
-      parts.push(this.qualityStatusText(q.status, false).toLowerCase?.() ? this.qualityStatusText(q.status, false).toLowerCase() : this.qualityStatusText(q.status, false));
+      const statusText = this.qualityStatusText(q.status, false);
+      parts.push(this.isJapanese() || this.isChinese() ? statusText : statusText.toLowerCase());
     }
     if (diffWarn){
-      parts.push(this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大'));
+      parts.push(this.largeDeltaLabelText());
     }
     const text = hasWarning
       ? Array.from(new Set(parts)).join(' / ')

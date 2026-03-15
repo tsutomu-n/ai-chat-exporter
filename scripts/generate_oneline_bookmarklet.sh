@@ -275,9 +275,9 @@ unifiedFirefox = replaceRegex(
     const q = quality || {status:'WARN', score:0};
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-    const label = q.status==='PASS' ? (ja ? '良好' : zh ? '良好' : 'Good') : q.status==='WARN' ? (ja ? '注意' : zh ? '快速检查' : 'Review') : (ja ? '再実行' : zh ? '建议重试' : 'Rerun');
+    const label = this.qualityStatusText(q.status,true);
     const color = q.status==='PASS' ? THEME.ok : q.status==='WARN' ? THEME.warn : THEME.bad;
-    let hint = q.status==='PASS' ? (ja ? '保存できそうです。' : zh ? '可保存。' : 'Ready to save.') : q.status==='WARN' ? (ja ? '必要なら再実行。' : zh ? '较长时可重试一次。' : 'Rerun if needed.') : (ja ? '再実行推奨です。' : zh ? '可能缺失，建议重试。' : 'Rerun recommended.');
+    let hint = this.qualityHintText(q.status,true);
     let diffLine = '';
     if (diff?.previous){
       const prev = diff.previous.count;
@@ -289,7 +289,7 @@ unifiedFirefox = replaceRegex(
         : zh
         ? \`\${diff.previousLabel || '上一次'}: \${prev}条 / 本次: \${now}条（差值 \${sign}\${delta}条）\`
         : \`\${diff.previousLabel || 'Previous'}: \${prev} / Now: \${now} (delta \${sign}\${delta})\`;
-      if (Math.abs(delta) > 1) hint = ja ? '前回との差が大きいです。' : zh ? '与上次差异大。' : 'Large delta from previous.';
+      if (Math.abs(delta) > 1) hint = this.largeDeltaHintText(true);
     }
     return {label, color, hint, diffLine, score:q.score, raw:q};
   }
@@ -306,10 +306,13 @@ unifiedFirefox = replaceRegex(
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const parts = [];
-    if (q.status!=='PASS') parts.push(q.status==='WARN' ? (ja ? '注意' : zh ? '检查' : 'Review') : (ja ? '再実行' : zh ? '重试' : 'Rerun'));
+    if (q.status!=='PASS'){
+      const statusText = this.qualityStatusText(q.status,true);
+      parts.push(ja || zh ? statusText : statusText.toLowerCase());
+    }
     if (diff?.previous){
       const diffAbs = Math.abs(diff.diff || 0);
-      if (diffAbs > 1) parts.push(ja ? '前回との差が大きい' : zh ? '与上一次差异较大' : 'large delta from previous');
+      if (diffAbs > 1) parts.push(this.largeDeltaLabelText());
     }
     const text = parts.length ? parts.join(' / ') : (ja ? 'なし' : zh ? '无' : 'none');
     return {hasWarning: parts.length > 0, text};

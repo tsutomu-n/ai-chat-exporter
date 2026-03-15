@@ -992,6 +992,15 @@ describe("ai-chat export formats", () => {
     expect(warning.text).toContain("与上一次差异较大");
   });
 
+  test("provides compact quality wording helpers for lightweight dialogs", () => {
+    const { app } = loadApp({ navigatorLanguage: "zh-CN" });
+
+    expect(app.qualityStatusText("WARN", true)).toBe("快速检查");
+    expect(app.qualityHintText("WARN", true)).toBe("较长时可重试一次。");
+    expect(app.largeDeltaHintText(true)).toBe("与上次差异大。");
+    expect(app.largeDeltaLabelText()).toBe("与上一次差异较大");
+  });
+
   test("reruns carefully without persisting the preset change", async () => {
     const { app } = loadApp({
       storedConfig: {
