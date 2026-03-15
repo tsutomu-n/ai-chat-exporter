@@ -343,7 +343,7 @@ unifiedFirefox = replaceRegex(
     return ja
       ? [\`抽出件数: \${messages.length}件\`, \`保存状態: \${savedState}\`, diffLine]
       : zh
-      ? [\`已提取: \${messages.length}条\`, \`保存状态: \${savedState}\`, diffLine]
+      ? [\`提取: \${messages.length}条\`, \`状态: \${savedState}\`, diffLine]
       : [\`Messages: \${messages.length}\`, \`Saved state: \${savedState}\`, diffLine];
   }
 
@@ -352,7 +352,7 @@ unifiedFirefox = replaceRegex(
     return this.isJapanese()
       ? \`最終保存: \${Number.isFinite(previous?.count) ? \`\${previous.count}件\` : 'なし'}\`
       : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN')
-      ? \`上次保存: \${Number.isFinite(previous?.count) ? \`\${previous.count}条\` : '无'}\`
+      ? \`上次: \${Number.isFinite(previous?.count) ? \`\${previous.count}条\` : '无'}\`
       : \`Last saved: \${Number.isFinite(previous?.count) ? \`\${previous.count}\` : 'none'}\`;
   }
 
@@ -406,7 +406,7 @@ unifiedFirefox = replaceRegex(
       const ov = this.overlay();
       const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
       const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
-      body.appendChild(Utils.el('div',{text:isJa ? '保存前の確認' : isZh ? '保存前确认' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;'}));
+      body.appendChild(Utils.el('div',{text:isJa ? '保存前の確認' : isZh ? '保存确认' : 'Review before saving',style:'font-size:20px;line-height:1.35;font-weight:700;'}));
       const lines = [
         isJa ? \`判定: \${summary.label}（\${summary.score}点）\` : isZh ? \`状态: \${summary.label}（\${summary.score}分）\` : \`Status: \${summary.label} (\${summary.score} pts)\`,
         summary.hint,
@@ -436,7 +436,7 @@ unifiedFirefox = replaceRegex(
         this.btn(isJa ? 'クリップボードにコピー' : isZh ? '复制' : 'Copy to clipboard','secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制。' : 'Copied to the clipboard.','success');
+            Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制。' : 'Copied.','success');
             finish({action:'done_clipboard', saveState:'clipboard'});
           }catch{
             Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : isZh ? '复制失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
@@ -445,14 +445,14 @@ unifiedFirefox = replaceRegex(
               finish({action:'done_file', saveState:'file'});
             }else{
               try{
-                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : isZh ? '复制失败。请从这里手动复制。' : 'Copy failed. Copy the text manually from this prompt.', output);
+                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : isZh ? '复制失败。请从这里手动复制。' : 'Copy failed. Copy here.', output);
               }catch{
-                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : isZh ? '复制和保存都失败。' : 'Copy and save both failed.','warn', 3200);
+                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : isZh ? '复制和保存都失败。' : 'Copy/save failed.','warn', 3200);
               }
             }
           }
         }),
-        this.btn(isJa ? '保存' : isZh ? '保存文件' : 'Save file','primary', ()=>{
+        this.btn(isJa ? '保存' : isZh ? '保存' : 'Save file','primary', ()=>{
           const ok = this.downloadFile(fileName, output);
           finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
         })
@@ -487,7 +487,7 @@ unifiedFirefox = replaceRegex(
         out += this.isJapanese()
           ? \`\${title}\\n\\n- 形式: \${fmt.label}\\n- サイト: \${site}\\n- 保存日時: \${savedAt}\\n- URL: \${url}\\n- 会話数: \${messages.length}\\n- 警告: \${warning}\\n\\n================\\n\\n\`
           : zh
-          ? \`\${title}\\n\\n- 格式: \${fmt.label}\\n- 站点: \${site}\\n- 保存时间: \${savedAt}\\n- URL: \${url}\\n- 消息数: \${messages.length}\\n- 警告: \${warning}\\n\\n================\\n\\n\`
+          ? \`\${title}\\n\\n- 格式: \${fmt.label}\\n- 站点: \${site}\\n- 时间: \${savedAt}\\n- URL: \${url}\\n- 消息: \${messages.length}\\n- 警告: \${warning}\\n\\n================\\n\\n\`
           : \`\${title}\\n\\n- Format: \${fmt.label}\\n- Site: \${site}\\n- Saved at: \${savedAt}\\n- URL: \${url}\\n- Messages: \${messages.length}\\n- Warning: \${warning}\\n\\n================\\n\\n\`;
       }
       for (let i=0;i<messages.length;i++){
@@ -502,7 +502,7 @@ unifiedFirefox = replaceRegex(
     out += this.isJapanese()
       ? \`- サイト: \${site}\\n- 保存日時: \${savedAt}\\n- URL: \${url}\\n- 会話数: \${messages.length}\\n\\n---\\n\\n\`
       : zh
-      ? \`- 站点: \${site}\\n- 保存时间: \${savedAt}\\n- URL: \${url}\\n- 消息数: \${messages.length}\\n\\n---\\n\\n\`
+      ? \`- 站点: \${site}\\n- 时间: \${savedAt}\\n- URL: \${url}\\n- 消息: \${messages.length}\\n\\n---\\n\\n\`
       : \`- Site: \${site}\\n- Saved at: \${savedAt}\\n- URL: \${url}\\n- Messages: \${messages.length}\\n\\n---\\n\\n\`;
     for (let i=0;i<messages.length;i++){
       const m = messages[i];
