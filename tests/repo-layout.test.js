@@ -116,6 +116,8 @@ describe("repository layout", () => {
     expect(readme).toContain("No browser extension is needed");
     expect(readme).toContain("One-file version for Chrome / Chromium");
     expect(readme).toContain("Remembers your mode and format in the browser");
+    expect(readme).toContain("Firefox build keeps the same extraction flow");
+    expect(readme).toContain("compact save preview");
 
     expect(readmeJa).toContain("## このツールの目的");
     expect(readmeJa).toContain("## 主な機能");
@@ -173,6 +175,8 @@ describe("repository layout", () => {
     expect(page).toContain("clipboard");
     expect(page).toContain("This public repo mainly ships these two bookmarklet files.");
     expect(page).toContain("Scrolls more and opens more hidden content.");
+    expect(page).toContain("Firefox build keeps the same extraction flow");
+    expect(page).toContain("compact save preview");
 
     expect(pageJa).toContain("# AIチャット書き出し 使い方ガイド");
     expect(pageJa).toContain("## 基本的な使い方");

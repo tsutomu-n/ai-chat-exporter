@@ -34,6 +34,8 @@ This tool is built to collect the conversation as safely as possible and export 
   - Smaller one-file version for Firefox
   - Uses a compact result screen so it fits Firefox bookmark limits better
 
+Firefox build keeps the same extraction flow, but it uses a compact save preview and a smaller result screen to stay within Firefox bookmark limits.
+
 ## How it looks
 
 ### Bookmark setup

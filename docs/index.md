@@ -10,6 +10,7 @@
   - Smaller one-file version for Firefox
 
 This public repo mainly ships these two bookmarklet files.
+Firefox build keeps the same extraction flow, but it uses a compact save preview and a smaller result screen to stay within Firefox bookmark limits.
 
 ## Basic usage
 
