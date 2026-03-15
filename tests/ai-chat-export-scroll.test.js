@@ -216,4 +216,52 @@ describe("ScrollEngine weak identity handling", () => {
       { role: "Model", content: "MM", sig: expect.any(String) },
     ]);
   });
+
+  test("promotes unknown repeated messages to user without leaving stale duplicates", async () => {
+    const result = await harvestMessages([
+      [
+        { role: "Unknown", content: "AA" },
+        { role: "Model", content: "XX" },
+        { role: "User", content: "AA" },
+        { role: "Model", content: "ZZ" },
+      ],
+      [
+        { role: "User", content: "AA" },
+        { role: "Model", content: "XX" },
+        { role: "User", content: "AA" },
+        { role: "Model", content: "ZZ" },
+      ],
+    ]);
+
+    expect(result.messages).toEqual([
+      { role: "User", content: "AA", sig: expect.any(String) },
+      { role: "Model", content: "XX", sig: expect.any(String) },
+      { role: "User", content: "AA", sig: expect.any(String) },
+      { role: "Model", content: "ZZ", sig: expect.any(String) },
+    ]);
+  });
+
+  test("promotes an unknown middle message to user without splitting the slot", async () => {
+    const result = await harvestMessages([
+      [
+        { role: "User", content: "AA" },
+        { role: "Model", content: "XX" },
+        { role: "Unknown", content: "BB" },
+        { role: "Model", content: "YY" },
+      ],
+      [
+        { role: "User", content: "AA" },
+        { role: "Model", content: "XX" },
+        { role: "User", content: "BB" },
+        { role: "Model", content: "YY" },
+      ],
+    ]);
+
+    expect(result.messages).toEqual([
+      { role: "User", content: "AA", sig: expect.any(String) },
+      { role: "Model", content: "XX", sig: expect.any(String) },
+      { role: "User", content: "BB", sig: expect.any(String) },
+      { role: "Model", content: "YY", sig: expect.any(String) },
+    ]);
+  });
 });

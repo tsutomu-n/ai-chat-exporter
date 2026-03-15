@@ -857,6 +857,49 @@ describe("ai-chat export formats", () => {
     await expect(pending).resolves.toEqual({ action: "cancel" });
   });
 
+  test("formats the chinese comparison base label clearly for rerun snapshots", async () => {
+    const { app } = loadApp({ navigatorLanguage: "zh-CN" });
+    setupUiDom();
+
+    const previous = app.createResultSnapshot(
+      [
+        { role: "User", content: "old prompt" },
+        { role: "Model", content: "old answer" },
+      ],
+      { status: "PASS", score: 100 },
+      { preset: "normal" },
+    );
+
+    const pending = app.showResultDialog(
+      [
+        { role: "User", content: "new prompt" },
+        { role: "Model", content: "new answer" },
+        { role: "User", content: "follow up" },
+      ],
+      { status: "WARN", score: 75 },
+      {
+        alternateSnapshot: previous,
+        alternateTitle: "已保留上一次结果",
+        alternateButtonLabel: "查看上一次结果",
+        preset: "careful",
+      },
+    );
+
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("比较基准: 上一次结果（2条）");
+    expect(text).not.toContain("Comparison base: Previous result (2)");
+
+    const cancelButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "取消");
+
+    expect(cancelButton).toBeDefined();
+    cancelButton.click();
+
+    await expect(pending).resolves.toEqual({ action: "cancel" });
+  });
+
   test("uses simpler english labels in the result dialog", async () => {
     const { app } = loadApp({ navigatorLanguage: "en-US" });
     setupUiDom();

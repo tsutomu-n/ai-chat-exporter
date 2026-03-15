@@ -276,6 +276,7 @@ describe("repository layout", () => {
     expect(generator).toContain("\\`比較ベース: \\${label}（\\${count}件）\\`");
     expect(generator).toContain("\\`Comparison base: \\${label} (\\${count})\\`");
     expect(generator).toContain("\\`比较基准: \\${label}（\\${count}条）\\`");
+    expect(generator).toContain("const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');");
   });
 
   test("keeps only the curated README screenshots under stable names", () => {
