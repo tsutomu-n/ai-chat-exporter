@@ -397,7 +397,7 @@ unifiedFirefox = replaceRegex(
       const isJa = this.isJapanese();
       const isZh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
       const alternateSnapshot = options?.alternateSnapshot || null;
-      const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : 'Previous result');
+      const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');
       const resultPreset = options?.preset || this.config.preset;
       const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
@@ -414,7 +414,7 @@ unifiedFirefox = replaceRegex(
         isJa
           ? \`件数: \${messages.length}件 / 速度: \${this.getPresetLabelFor(resultPreset)} / 形式: \${this.getFormatLabel()}\`
           : isZh
-          ? \`消息数: \${messages.length}条 / 运行模式: \${this.getPresetLabelFor(resultPreset)} / 格式: \${this.getFormatLabel()}\`
+          ? \`消息: \${messages.length} / 模式: \${this.getPresetLabelFor(resultPreset)} / 格式: \${this.getFormatLabel()}\`
           : \`Messages: \${messages.length} / Mode: \${this.getPresetLabelFor(resultPreset)} / Format: \${this.getFormatLabel()}\`
       ];
       for (const line of lines){
@@ -433,21 +433,21 @@ unifiedFirefox = replaceRegex(
         this.btn(isJa ? 'ていねいに再実行' : isZh ? '细致重试' : 'Rerun carefully','secondary', async ()=>{
           if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
         }),
-        this.btn(isJa ? 'クリップボードにコピー' : isZh ? '复制到剪贴板' : 'Copy to clipboard','secondary', async ()=>{
+        this.btn(isJa ? 'クリップボードにコピー' : isZh ? '复制' : 'Copy to clipboard','secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制到剪贴板。' : 'Copied to the clipboard.','success');
+            Utils.toast(isJa ? 'コピーしました。' : isZh ? '已复制。' : 'Copied to the clipboard.','success');
             finish({action:'done_clipboard', saveState:'clipboard'});
           }catch{
-            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : isZh ? '复制到剪贴板失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
+            Utils.toast(isJa ? 'コピーできなかったため、ファイル保存に切り替えます。' : isZh ? '复制失败，改为保存文件。' : 'Clipboard copy failed, switching to file save.','warn', 3200);
             const ok = this.downloadFile(fileName, output);
             if (ok){
               finish({action:'done_file', saveState:'file'});
             }else{
               try{
-                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : isZh ? '复制失败。请从这个输入框手动复制文本。' : 'Copy failed. Copy the text manually from this prompt.', output);
+                window.prompt(isJa ? 'コピーできなかったため、この欄から手動でコピーしてください。' : isZh ? '复制失败。请从这里手动复制。' : 'Copy failed. Copy the text manually from this prompt.', output);
               }catch{
-                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : isZh ? '复制和保存都失败了。' : 'Copy and save both failed.','warn', 3200);
+                Utils.toast(isJa ? 'コピーも保存もできませんでした。' : isZh ? '复制和保存都失败。' : 'Copy and save both failed.','warn', 3200);
               }
             }
           }

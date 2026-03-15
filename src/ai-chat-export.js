@@ -1173,6 +1173,10 @@ class ScrollEngine{
       if (role) return 1;
       return 0;
     };
+    const roleCompatibleForWeakPromotion = (currentRole, nextRole)=>{
+      if (currentRole === nextRole) return true;
+      return currentRole === 'Unknown' || nextRole === 'Unknown';
+    };
     const contentScore = (content)=>{
       const text = String(content || '').trim();
       return text.length;
@@ -1198,7 +1202,7 @@ class ScrollEngine{
       for (const [existingKey, record] of messageMap.entries()){
         if (usedKeys?.has(existingKey)) continue;
         if (!record.weakIdentity) continue;
-        if (record.role !== next.role) continue;
+        if (!roleCompatibleForWeakPromotion(record.role, next.role)) continue;
         const currentContent = String(record.content || '').trim();
         const nextContent = String(next.content || '').trim();
         if (!currentContent || !nextContent) continue;
@@ -1860,7 +1864,7 @@ class App{
     const nowCount = messages.length;
     const nowDigest = this.computeRunDigest(messages);
     let previous = savedPrevious;
-    let previousLabel = this.isJapanese() ? '前回' : 'Previous';
+    let previousLabel = this.text('前回', 'Previous', '上一次');
     let comparisonKind = 'saved';
 
     if (comparisonSnapshot && Array.isArray(comparisonSnapshot.messages)){
@@ -1868,7 +1872,7 @@ class App{
         count: comparisonSnapshot.messages.length,
         digest: this.computeRunDigest(comparisonSnapshot.messages)
       };
-      previousLabel = this.isJapanese() ? '前回結果' : 'Previous result';
+      previousLabel = this.text('前回結果', 'Previous result', '上一次结果');
       comparisonKind = 'snapshot';
     }
 
