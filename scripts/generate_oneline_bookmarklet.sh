@@ -241,6 +241,54 @@ minimal = replaceRegex(
     this.busyUI=null;
   }
 
+  qualityStatusText(status){
+    if (this.isJapanese()){
+      if (status==='PASS') return '良好';
+      if (status==='WARN') return '注意';
+      return '再実行';
+    }
+    if (this.isChinese()){
+      if (status==='PASS') return '良好';
+      if (status==='WARN') return '快速检查';
+      return '建议重试';
+    }
+    if (status==='PASS') return 'Good';
+    if (status==='WARN') return 'Review';
+    return 'Rerun';
+  }
+
+  qualityHintText(status){
+    if (status==='PASS'){
+      return this.isJapanese()
+        ? '保存できそうです。'
+        : this.isChinese()
+        ? '可保存。'
+        : 'Ready to save.';
+    }
+    if (status==='WARN'){
+      return this.isJapanese()
+        ? '必要なら再実行。'
+        : this.isChinese()
+        ? '较长时可重试一次。'
+        : 'Rerun if needed.';
+    }
+    return this.isJapanese()
+      ? '再実行推奨です。'
+      : this.isChinese()
+      ? '可能缺失，建议重试。'
+      : 'Rerun recommended.';
+  }
+
+  largeDeltaHintText(){
+    if (this.isJapanese()) return '前回との差が大きいです。';
+    if (this.isChinese()) return '与上次差异大。';
+    return 'Large delta from previous.';
+  }
+
+  largeDeltaLabelText(){
+    return this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大');
+  }
+
   qualitySummary(quality, diff){`,
   'compact config and busy dialogs',
 );

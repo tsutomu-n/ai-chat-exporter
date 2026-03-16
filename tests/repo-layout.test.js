@@ -353,6 +353,20 @@ describe("repository layout", () => {
     expect(generator).toContain("const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');");
   });
 
+  test("keeps compact quality wording helpers in generated bookmarklets", () => {
+    const chromeEn = readRepoFile("ai-chat-export.chrome.en.bookmarklet.oneliner.js");
+    const firefoxEn = readRepoFile("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
+
+    expect(chromeEn).toMatch(/qualityStatusText\([^)]*\)\{/);
+    expect(chromeEn).toMatch(/qualityHintText\([^)]*\)\{/);
+    expect(chromeEn).toMatch(/largeDeltaHintText\([^)]*\)\{/);
+    expect(chromeEn).toMatch(/largeDeltaLabelText\(\)\{/);
+    expect(firefoxEn).toMatch(/qualityStatusText\([^)]*\)\{/);
+    expect(firefoxEn).toMatch(/qualityHintText\([^)]*\)\{/);
+    expect(firefoxEn).toMatch(/largeDeltaHintText\([^)]*\)\{/);
+    expect(firefoxEn).toMatch(/largeDeltaLabelText\(\)\{/);
+  });
+
   test("keeps only the curated README screenshots under stable names", () => {
     expect(existsSync(rootPath("assets", "01-bookmark-setup.png"))).toBe(true);
     expect(existsSync(rootPath("assets", "02-config-dialog.png"))).toBe(true);
