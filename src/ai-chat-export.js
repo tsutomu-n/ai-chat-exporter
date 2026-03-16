@@ -26,14 +26,22 @@ function detectPreferredLang(){
   }
 }
 
-let runtimeLang = detectPreferredLang();
+function detectFixedVariantLang(){
+  try{
+    return normalizeLangId(globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__);
+  }catch{
+    return null;
+  }
+}
+
+let runtimeLang = detectFixedVariantLang() || detectPreferredLang();
 
 function getRuntimeLang(){
-  return normalizeLangId(runtimeLang) || detectPreferredLang();
+  return normalizeLangId(runtimeLang) || detectFixedVariantLang() || detectPreferredLang();
 }
 
 function setRuntimeLang(lang){
-  runtimeLang = normalizeLangId(lang) || detectPreferredLang();
+  runtimeLang = normalizeLangId(lang) || detectFixedVariantLang() || detectPreferredLang();
   return runtimeLang;
 }
 
@@ -1514,6 +1522,7 @@ class App{
   constructor(){
     this.adapter = AdapterFactory.getAdapter();
     this.siteId = this.adapter.id;
+    this.fixedVariantLang = detectFixedVariantLang();
     this.config = this.loadConfig();
     setRuntimeLang(this.getLang());
     this.abortState = {aborted:false};
@@ -1521,8 +1530,16 @@ class App{
     this.pendingRerunSnapshot = null;
   }
 
+  getFixedVariantLang(){
+    return normalizeLangId(this.fixedVariantLang);
+  }
+
+  hasFixedVariantLang(){
+    return !!this.getFixedVariantLang();
+  }
+
   getLang(){
-    return normalizeLangId(this.config?.lang) || getRuntimeLang();
+    return this.getFixedVariantLang() || normalizeLangId(this.config?.lang) || getRuntimeLang();
   }
 
   isJapanese(){
@@ -1632,9 +1649,10 @@ class App{
   normalizeStoredConfig(raw, def){
     const presets = def.presets;
     const preset = (raw && typeof raw.preset === 'string' && presets[raw.preset]) ? raw.preset : def.preset;
+    const fixedVariantLang = this.getFixedVariantLang();
     const merged = {
       ...def,
-      lang: normalizeLangId(raw?.lang) || def.lang,
+      lang: fixedVariantLang || normalizeLangId(raw?.lang) || def.lang,
       preset,
       fmt: normalizeFormatId(raw && typeof raw.fmt === 'string' ? raw.fmt : def.fmt),
       txtHeader: typeof raw?.txtHeader === 'boolean' ? raw.txtHeader : def.txtHeader,
@@ -1675,8 +1693,9 @@ class App{
       normal:  { scrollMax: 32, scrollDelay: 220, autoExpand:true,  expandMaxClicks: 24, expandClickDelay: 130 },
       careful: { scrollMax: 96, scrollDelay: 420, autoExpand:true,  expandMaxClicks: 80, expandClickDelay: 150 }
     };
+    const fixedVariantLang = this.getFixedVariantLang();
     return {
-      lang: detectPreferredLang(),
+      lang: fixedVariantLang || detectPreferredLang(),
       fmt:'std', // std|txt|json|obs?
       txtHeader:true,
       preset:'normal',
@@ -2075,24 +2094,26 @@ class App{
       ]);
 
       const body = Utils.el('div',{style:'padding:18px 22px;'});
-      body.appendChild(this.sectionTitle(this.text('言語', 'Language', '语言')));
-      const langWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
-      const langBtn = (lang)=>{
-        const active = this.getLang()===lang;
-        const btn = Utils.el('button',{style:`padding:11px 12px;border-radius:12px;border:1px solid ${active?THEME.accentLine:THEME.border};background:${active?'rgba(95,162,255,0.14)':THEME.bg};color:${THEME.fg};cursor:pointer;`});
-        btn.append(
-          Utils.el('div',{text:this.languageLabel(lang),style:'font-weight:700;font-size:14px;line-height:1.45;'}),
-          Utils.el('div',{text:this.languageDescription(lang),style:`margin-top:4px;font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
-        );
-        btn.addEventListener('click', ()=>{
-          this.config.lang = lang;
-          this.saveConfig();
-          rerender();
-        });
-        return btn;
-      };
-      langWrap.append(langBtn('en'), langBtn('ja'), langBtn('zh-CN'));
-      body.appendChild(langWrap);
+      if (!this.hasFixedVariantLang()){
+        body.appendChild(this.sectionTitle(this.text('言語', 'Language', '语言')));
+        const langWrap = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;'});
+        const langBtn = (lang)=>{
+          const active = this.getLang()===lang;
+          const btn = Utils.el('button',{style:`padding:11px 12px;border-radius:12px;border:1px solid ${active?THEME.accentLine:THEME.border};background:${active?'rgba(95,162,255,0.14)':THEME.bg};color:${THEME.fg};cursor:pointer;`});
+          btn.append(
+            Utils.el('div',{text:this.languageLabel(lang),style:'font-weight:700;font-size:14px;line-height:1.45;'}),
+            Utils.el('div',{text:this.languageDescription(lang),style:`margin-top:4px;font-size:14px;line-height:1.6;color:${THEME.muted};font-weight:500;`})
+          );
+          btn.addEventListener('click', ()=>{
+            this.config.lang = lang;
+            this.saveConfig();
+            rerender();
+          });
+          return btn;
+        };
+        langWrap.append(langBtn('en'), langBtn('ja'), langBtn('zh-CN'));
+        body.appendChild(langWrap);
+      }
 
       body.appendChild(this.sectionTitle(this.text('速度プリセット', 'Mode', '运行模式')));
       const presetWrap = Utils.el('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;'});

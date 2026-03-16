@@ -4,10 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SRC="${ROOT_DIR}/src/ai-chat-export.js"
-CHROME_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.chrome.bookmarklet.oneliner.js"
-FIREFOX_BOOKMARKLET_OUT="${ROOT_DIR}/ai-chat-export.firefox.bookmarklet.oneliner.js"
-DOCS_CHROME_BOOKMARKLET_OUT="${ROOT_DIR}/docs/ai-chat-export.chrome.bookmarklet.oneliner.js"
-DOCS_FIREFOX_BOOKMARKLET_OUT="${ROOT_DIR}/docs/ai-chat-export.firefox.bookmarklet.oneliner.js"
 
 export BUN_TMPDIR="${BUN_TMPDIR:-${TMPDIR:-/tmp}}"
 export BUN_INSTALL="${BUN_INSTALL:-${BUN_TMPDIR%/}/bun-install}"
@@ -511,27 +507,45 @@ else
   npx --yes terser "${TMP_UNIFIED_FIREFOX_BODY}" --compress 'passes=5,toplevel=true,unsafe=true,pure_getters=true' --mangle 'toplevel=true' --format ascii_only=true --output "${TMP_FIREFOX_MIN}"
 fi
 
-node - "${TMP_CHROME_MIN}" "${CHROME_BOOKMARKLET_OUT}" "${DOCS_CHROME_BOOKMARKLET_OUT}" "${TMP_FIREFOX_MIN}" "${FIREFOX_BOOKMARKLET_OUT}" "${DOCS_FIREFOX_BOOKMARKLET_OUT}" <<'NODE'
+node - "${TMP_CHROME_MIN}" "${TMP_FIREFOX_MIN}" "${ROOT_DIR}" <<'NODE'
 const fs = require('fs');
+const path = require('path');
 
-const [, , chromeMinPath, chromeOutPath, docsChromeOutPath, firefoxMinPath, firefoxOutPath, docsFirefoxOutPath] = process.argv;
+const [, , chromeMinPath, firefoxMinPath, rootDir] = process.argv;
+const minifiedBodies = {
+  chrome: fs.readFileSync(chromeMinPath, 'utf8').trim(),
+  firefox: fs.readFileSync(firefoxMinPath, 'utf8').trim(),
+};
+const variants = [
+  { browser: 'chrome', lang: 'ja', fileName: 'ai-chat-export.chrome.ja.bookmarklet.oneliner.js', docsFileName: 'docs/ai-chat-export.chrome.ja.bookmarklet.oneliner.js' },
+  { browser: 'chrome', lang: 'en', fileName: 'ai-chat-export.chrome.en.bookmarklet.oneliner.js', docsFileName: 'docs/ai-chat-export.chrome.en.bookmarklet.oneliner.js' },
+  { browser: 'chrome', lang: 'zh-CN', fileName: 'ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js', docsFileName: 'docs/ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js' },
+  { browser: 'firefox', lang: 'ja', fileName: 'ai-chat-export.firefox.ja.bookmarklet.oneliner.js', docsFileName: 'docs/ai-chat-export.firefox.ja.bookmarklet.oneliner.js' },
+  { browser: 'firefox', lang: 'en', fileName: 'ai-chat-export.firefox.en.bookmarklet.oneliner.js', docsFileName: 'docs/ai-chat-export.firefox.en.bookmarklet.oneliner.js' },
+  { browser: 'firefox', lang: 'zh-CN', fileName: 'ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js', docsFileName: 'docs/ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js' },
+];
 
-for (const [srcPath, dstPath] of [
-  [chromeMinPath, chromeOutPath],
-  [chromeMinPath, docsChromeOutPath],
-  [firefoxMinPath, firefoxOutPath],
-  [firefoxMinPath, docsFirefoxOutPath],
-]) {
-  let body = fs.readFileSync(srcPath, 'utf8').trim();
-  if (!body.startsWith('javascript:')) body = `javascript:${body}`;
-  fs.writeFileSync(dstPath, `${body}\n`);
-  console.log(`Generated ${dstPath} (${body.length} chars)`);
+function buildVariantBookmarklet(minifiedBody, lang) {
+  let body = String(minifiedBody || '').trim();
+  if (body.startsWith('javascript:')) body = body.slice('javascript:'.length);
+  return `javascript:globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__=${JSON.stringify(lang)};${body}`;
+}
+
+for (const variant of variants) {
+  const bookmarklet = buildVariantBookmarklet(minifiedBodies[variant.browser], variant.lang);
+  for (const relativePath of [variant.fileName, variant.docsFileName]) {
+    const dstPath = path.join(rootDir, relativePath);
+    fs.writeFileSync(dstPath, `${bookmarklet}\n`);
+    console.log(`Generated ${dstPath} (${bookmarklet.length} chars)`);
+  }
 }
 NODE
 
 rm -f \
+  "${ROOT_DIR}"/ai-chat-export.{chrome,firefox}.bookmarklet.oneliner.js \
   "${ROOT_DIR}/ai-chat-export.bookmarklet.oneliner.js" \
   "${ROOT_DIR}/ai-chat-export.unified.bookmarklet.oneliner.js" \
+  "${ROOT_DIR}"/docs/ai-chat-export.{chrome,firefox}.bookmarklet.oneliner.js \
   "${ROOT_DIR}/docs/ai-chat-export.bookmarklet.oneliner.js" \
   "${ROOT_DIR}/docs/ai-chat-export.unified.bookmarklet.oneliner.js" \
   "${ROOT_DIR}/docs/ai-chat-export.min.js" \

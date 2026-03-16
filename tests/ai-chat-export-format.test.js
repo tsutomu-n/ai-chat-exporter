@@ -6,7 +6,22 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = path.join(repoRoot, "src", "ai-chat-export.js");
 
-function loadApp({ storedConfig, navigatorLanguage = "ja-JP" } = {}) {
+function defaultStoredConfig(overrides = {}) {
+  return {
+    lang: "ja",
+    fmt: "std",
+    preset: "normal",
+    scrollMax: 32,
+    scrollDelay: 220,
+    autoExpand: true,
+    expandMaxClicks: 24,
+    expandClickDelay: 130,
+    txtHeader: true,
+    ...overrides,
+  };
+}
+
+function loadApp({ storedConfig, navigatorLanguage = "ja-JP", fixedVariantLang } = {}) {
   const store = new Map();
   const source = readFileSync(sourcePath, "utf8")
     .replace(/^javascript:/, "")
@@ -64,6 +79,11 @@ function loadApp({ storedConfig, navigatorLanguage = "ja-JP" } = {}) {
     visibility: "visible",
     opacity: "1",
   });
+  if (fixedVariantLang) {
+    globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__ = fixedVariantLang;
+  } else {
+    delete globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__;
+  }
   globalThis.__AI_CHAT_EXPORT_RUNNING__ = false;
   delete globalThis.__AI_CHAT_EXPORT_TEST__;
 
@@ -408,21 +428,27 @@ describe("ai-chat export formats", () => {
   test("prefers the stored language over browser auto detection", () => {
     const { app } = loadApp({
       navigatorLanguage: "en-US",
-      storedConfig: {
-        lang: "ja",
-        fmt: "std",
-        preset: "normal",
-        scrollMax: 32,
-        scrollDelay: 220,
-        autoExpand: true,
-        expandMaxClicks: 24,
-        expandClickDelay: 130,
-        txtHeader: true,
-      },
+      storedConfig: defaultStoredConfig({ lang: "ja" }),
     });
 
     expect(app.config.lang).toBe("ja");
     expect(app.roleLabel("User")).toBe("あなた");
+  });
+
+  test("prefers a fixed bookmarklet language variant over stored and browser language", () => {
+    const { app, store } = loadApp({
+      navigatorLanguage: "ja-JP",
+      fixedVariantLang: "en",
+      storedConfig: defaultStoredConfig({ lang: "ja" }),
+    });
+
+    expect(app.config.lang).toBe("en");
+    expect(app.getLang()).toBe("en");
+    expect(app.roleLabel("User")).toBe("You");
+
+    app.saveConfig();
+
+    expect(JSON.parse(store.get("ai-chat-export:v2_cfg_generic")).lang).toBe("en");
   });
 
   test("shows plain text in the config dialog and switches to txt when clicked", async () => {
@@ -534,6 +560,31 @@ describe("ai-chat export formats", () => {
     const startButton = globalThis.document.body
       .querySelectorAll("button")
       .find((button) => button.textContent === "Start");
+    startButton.click();
+
+    await expect(pending).resolves.toBe(true);
+  });
+
+  test("hides language switching in the config dialog when the bookmarklet language is fixed", async () => {
+    const { app } = loadApp({
+      navigatorLanguage: "ja-JP",
+      fixedVariantLang: "zh-CN",
+    });
+    setupUiDom();
+
+    const pending = app.showConfigDialog();
+    const text = globalThis.document.body.textContent;
+
+    expect(text).toContain("导出 AI 对话");
+    expect(text).not.toContain("语言");
+    expect(text).not.toContain("English");
+    expect(text).not.toContain("日本語");
+    expect(text).not.toContain("中文");
+
+    const startButton = globalThis.document.body
+      .querySelectorAll("button")
+      .find((button) => button.textContent === "开始");
+    expect(startButton).toBeDefined();
     startButton.click();
 
     await expect(pending).resolves.toBe(true);
