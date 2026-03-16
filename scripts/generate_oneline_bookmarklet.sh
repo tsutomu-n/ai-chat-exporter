@@ -426,18 +426,28 @@ unifiedFirefox = replaceRegex(
     return new Promise(resolve=>{
       const isJa = this.isJapanese();
       const isZh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
+      const ui = isJa
+        ? ['保存確認','中止','再実行','コピー','保存','コピー済み。','コピー失敗。保存します。','コピー失敗。手動コピーしてください。','コピー/保存失敗。']
+        : isZh
+        ? ['保存确认','取消','重试','复制','保存','已复制。','复制失败，改为保存。','复制失败，请手动复制。','复制/保存失败。']
+        : ['Save review','Cancel','Rerun','Copy','Save','Copied.','Copy failed. Saving file.','Copy failed. Copy here.','Copy/save failed.'];
       const alternateSnapshot = options?.alternateSnapshot || null;
       const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');
       const resultPreset = options?.preset || this.config.preset;
       const diff = this.diffInfo(messages, alternateSnapshot);
       const summary = this.qualitySummary(quality, diff);
       const {fileName, output} = this.formatOutput(messages, quality, diff, resultPreset);
+      const lines = [
+        isJa ? \`判定: \${summary.label}（\${this.formatPoints(summary.score)}）\` : isZh ? \`状态: \${summary.label}（\${this.formatPoints(summary.score)}）\` : \`Status: \${summary.label} (\${this.formatPoints(summary.score)})\`,
+        summary.hint,
+        summary.diffLine || this.comparisonBaseLabel(diff),
+        isJa ? \`件数: \${messages.length}件 / \${this.getPresetLabelFor(resultPreset)} / \${this.getFormatLabel()}\` : isZh ? \`消息: \${messages.length} / \${this.getPresetLabelFor(resultPreset)} / \${this.getFormatLabel()}\` : \`Msgs: \${messages.length} / \${this.getPresetLabelFor(resultPreset)} / \${this.getFormatLabel()}\`
+      ];
 
       const ov = this.overlay();
       const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
       const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
-      body.appendChild(Utils.el('div',{text:this.compactDialogText('title'),style:'font-size:20px;line-height:1.35;font-weight:700;'}));
-      const lines = this.compactResultDialogLines(messages, summary, diff, resultPreset);
+      body.appendChild(Utils.el('div',{text:ui[0],style:'font-size:20px;line-height:1.35;font-weight:700;'}));
       for (const line of lines){
         body.appendChild(Utils.el('div',{text:line,style:\`font-size:14px;line-height:1.6;color:\${THEME.fg};font-weight:500;\`}));
       }
@@ -449,31 +459,31 @@ unifiedFirefox = replaceRegex(
       };
 
       const footerButtons = [
-        this.btn(this.compactDialogText('cancel'),'subtle', ()=>finish({action:'cancel'})),
+        this.btn(ui[1],'subtle', ()=>finish({action:'cancel'})),
         alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn(this.compactDialogText('careful_rerun'),'secondary', async ()=>{
+        this.btn(ui[2],'secondary', async ()=>{
           if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
         }),
-        this.btn(this.compactDialogText('copy'),'secondary', async ()=>{
+        this.btn(ui[3],'secondary', async ()=>{
           try{
             await navigator.clipboard.writeText(output);
-            Utils.toast(this.compactDialogText('copied'),'success');
+            Utils.toast(ui[5],'success');
             finish({action:'done_clipboard', saveState:'clipboard'});
           }catch{
-            Utils.toast(this.compactDialogText('copy_failed_save'),'warn', 3200);
+            Utils.toast(ui[6],'warn', 3200);
             const ok = this.downloadFile(fileName, output);
             if (ok){
               finish({action:'done_file', saveState:'file'});
             }else{
               try{
-                window.prompt(this.compactDialogText('manual_copy_prompt'), output);
+                window.prompt(ui[7], output);
               }catch{
-                Utils.toast(this.compactDialogText('copy_save_failed'),'warn', 3200);
+                Utils.toast(ui[8],'warn', 3200);
               }
             }
           }
         }),
-        this.btn(this.compactDialogText('save'),'primary', ()=>{
+        this.btn(ui[4],'primary', ()=>{
           const ok = this.downloadFile(fileName, output);
           finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
         })

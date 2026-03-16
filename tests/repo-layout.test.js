@@ -13,6 +13,44 @@ function readRepoFile(...parts) {
   return readFileSync(rootPath(...parts), "utf8");
 }
 
+function sourceAppMethodNames() {
+  const source = readRepoFile("src", "ai-chat-export.js");
+  const classStart = source.indexOf("class App{");
+  const classEnd = source.indexOf("\nconst app = new App();", classStart);
+  const classBody = source.slice(classStart, classEnd);
+
+  return new Set(
+    [...classBody.matchAll(/\n {2}(?:async\s+)?([A-Za-z_$][\w$]*)\([^)]*\)\{/g)].map(
+      ([, name]) => name,
+    ),
+  );
+}
+
+const appMethodNames = sourceAppMethodNames();
+
+function calledAppMethods(code) {
+  return [
+    ...new Set(
+      [...code.matchAll(/this\.([A-Za-z_$][\w$]*)\(/g)]
+        .map(([, name]) => name)
+        .filter((name) => appMethodNames.has(name)),
+    ),
+  ].sort();
+}
+
+function definedMethods(code) {
+  return new Set(
+    [...code.matchAll(/(?:^|[{};])(?:async\s+)?([A-Za-z_$][\w$]*)\([^)]*\)\{/g)].map(
+      ([, name]) => name,
+    ),
+  );
+}
+
+function missingCalledMethods(code) {
+  const defs = definedMethods(code);
+  return calledAppMethods(code).filter((name) => !defs.has(name)).sort();
+}
+
 const languageVariants = ["ja", "en", "zh-CN"];
 const browsers = ["chrome", "firefox"];
 
@@ -289,7 +327,7 @@ describe("repository layout", () => {
       expect(firefoxVariant).toContain("chatgpt.com");
       expect(firefoxVariant).toContain("aistudio.google.com");
       expect(firefoxVariant).toContain("x.com");
-      expect(firefoxVariant.length).toBeLessThan(62000);
+      expect(firefoxVariant.length).toBeLessThan(62500);
       expect(/[^\x00-\x7F]/.test(firefoxVariant)).toBe(false);
       expect(firefoxVariant).toContain(".filter(Boolean)");
     }
@@ -297,9 +335,9 @@ describe("repository layout", () => {
     const firefoxEn = readRepoFile("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
     expect(firefoxEn.length).toBeLessThan(chromeJa.length);
     expect(firefoxEn).toContain("Export AI chat");
-    expect(firefoxEn).toContain("compactDialogText(\"title\")");
-    expect(firefoxEn).toContain("compactDialogText(\"copy\")");
-    expect(firefoxEn).toContain("compactDialogText(\"copy_failed_save\")");
+    expect(firefoxEn).toContain("Save review");
+    expect(firefoxEn).toContain("Copy");
+    expect(firefoxEn).toContain("Copy failed. Saving file.");
     expect(firefoxEn).toContain("Comparison base:");
   });
 
@@ -337,13 +375,10 @@ describe("repository layout", () => {
     expect(generator).toContain("const statusText = this.qualityStatusText(q.status,true);");
     expect(generator).toContain("parts.push(ja || zh ? statusText : statusText.toLowerCase());");
     expect(generator).toContain("parts.push(this.largeDeltaLabelText());");
-    expect(generator).toContain("this.compactDialogText('title')");
-    expect(generator).toContain("this.compactDialogText('copy')");
-    expect(generator).toContain("this.compactDialogText('save')");
-    expect(generator).toContain("this.compactDialogText('copied')");
-    expect(generator).toContain("this.compactDialogText('manual_copy_prompt')");
-    expect(generator).toContain("this.compactDialogText('copy_save_failed')");
-    expect(generator).toContain("const lines = this.compactResultDialogLines(messages, summary, diff, resultPreset);");
+    expect(generator).toContain("const ui = isJa");
+    expect(generator).toContain("? ['保存確認','中止','再実行','コピー','保存','コピー済み。','コピー失敗。保存します。','コピー失敗。手動コピーしてください。','コピー/保存失敗。']");
+    expect(generator).toContain(": ['Save review','Cancel','Rerun','Copy','Save','Copied.','Copy failed. Saving file.','Copy failed. Copy here.','Copy/save failed.'];");
+    expect(generator).toContain("const lines = [");
     expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
     expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
     expect(generator).toContain("const count = diff?.previous?.count;");
@@ -351,6 +386,7 @@ describe("repository layout", () => {
     expect(generator).toContain("\\`Comparison base: \\${label} (\\${count})\\`");
     expect(generator).toContain("\\`比较基准: \\${label}（\\${count}条）\\`");
     expect(generator).toContain("const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');");
+    expect(generator).toContain("summary.diffLine || this.comparisonBaseLabel(diff)");
   });
 
   test("keeps compact quality wording helpers in generated bookmarklets", () => {
@@ -367,6 +403,13 @@ describe("repository layout", () => {
     expect(firefoxEn).toMatch(/qualityHintText\([^)]*\)\{/);
     expect(firefoxEn).toMatch(/largeDeltaHintText\([^)]*\)\{/);
     expect(firefoxEn).toMatch(/largeDeltaLabelText\(\)\{/);
+  });
+
+  test("keeps generated bookmarklet helper dependencies self-contained", () => {
+    for (const file of rootBookmarkletPaths()) {
+      const code = readRepoFile(file);
+      expect(missingCalledMethods(code)).toEqual([]);
+    }
   });
 
   test("keeps only the curated README screenshots under stable names", () => {
