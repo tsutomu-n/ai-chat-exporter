@@ -357,10 +357,12 @@ describe("repository layout", () => {
     const chromeEn = readRepoFile("ai-chat-export.chrome.en.bookmarklet.oneliner.js");
     const firefoxEn = readRepoFile("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
 
+    expect(chromeEn).toMatch(/formatPoints\([^)]*\)\{/);
     expect(chromeEn).toMatch(/qualityStatusText\([^)]*\)\{/);
     expect(chromeEn).toMatch(/qualityHintText\([^)]*\)\{/);
     expect(chromeEn).toMatch(/largeDeltaHintText\([^)]*\)\{/);
     expect(chromeEn).toMatch(/largeDeltaLabelText\(\)\{/);
+    expect(firefoxEn).toMatch(/formatPoints\([^)]*\)\{/);
     expect(firefoxEn).toMatch(/qualityStatusText\([^)]*\)\{/);
     expect(firefoxEn).toMatch(/qualityHintText\([^)]*\)\{/);
     expect(firefoxEn).toMatch(/largeDeltaHintText\([^)]*\)\{/);

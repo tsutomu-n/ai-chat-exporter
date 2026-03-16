@@ -81,6 +81,12 @@ minimal = replaceRegex(
   minimal,
   /\n\s*formatTimes\(value\)\{[\s\S]*?\n\s*getSiteLabel\(\)\{/,
   `
+  formatPoints(value){
+    if (this.isJapanese()) return \`\${this.formatNumber(value)}点\`;
+    if (this.isChinese()) return \`\${this.formatNumber(value)}分\`;
+    return \`\${this.formatNumber(value)} pts\`;
+  }
+
   getSiteLabel(){`,
   'minimal format helpers',
 );
