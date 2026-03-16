@@ -183,11 +183,6 @@ minimal = replaceRegex(
         return wrap;
       };
       body.append(title, site);
-      body.appendChild(row(ja?'言語':zh?'语言':'Language', chips([
-        {id:'en',label:'English'},
-        {id:'ja',label:'日本語'},
-        {id:'zh-CN',label:'中文'}
-      ], this.getLang(), (lang)=>{ this.config.lang=lang; this.saveConfig(); ov.remove(); this.showConfigDialog().then(resolve); })));
       body.appendChild(row(ja?'速度':zh?'运行模式':'Mode', chips([
         {id:'fast',label:this.getPresetLabelFor('fast')},
         {id:'normal',label:this.getPresetLabelFor('normal')},

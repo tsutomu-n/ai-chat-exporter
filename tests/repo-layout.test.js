@@ -303,6 +303,22 @@ describe("repository layout", () => {
     expect(firefoxEn).toContain("Comparison base:");
   });
 
+  test("removes language switching UI from generated language-specific bookmarklets", () => {
+    const chromeJa = readRepoFile("ai-chat-export.chrome.ja.bookmarklet.oneliner.js");
+    const chromeEn = readRepoFile("ai-chat-export.chrome.en.bookmarklet.oneliner.js");
+    const chromeZh = readRepoFile("ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js");
+    const firefoxJa = readRepoFile("ai-chat-export.firefox.ja.bookmarklet.oneliner.js");
+    const firefoxEn = readRepoFile("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
+    const firefoxZh = readRepoFile("ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js");
+
+    expect(chromeJa).not.toContain("言語");
+    expect(chromeEn).not.toContain("Language");
+    expect(chromeZh).not.toContain("语言");
+    expect(firefoxJa).not.toContain("言語");
+    expect(firefoxEn).not.toContain("Language");
+    expect(firefoxZh).not.toContain("语言");
+  });
+
   test("keeps zh locale scoped inside the compact busy dialog replacement", () => {
     const generator = readRepoFile("scripts", "generate_oneline_bookmarklet.sh");
 
