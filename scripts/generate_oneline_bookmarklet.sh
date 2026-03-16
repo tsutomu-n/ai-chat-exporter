@@ -44,6 +44,14 @@ function removeBetween(text, startMarker, endMarker, label) {
   return text.slice(0, start) + text.slice(end);
 }
 
+function replaceMarkedBlock(text, startMarker, endMarker, replacement, label) {
+  const start = text.indexOf(startMarker);
+  if (start === -1) throw new Error(`Missing ${label} start`);
+  const end = text.indexOf(endMarker, start);
+  if (end === -1) throw new Error(`Missing ${label} end`);
+  return text.slice(0, start) + replacement + text.slice(end + endMarker.length);
+}
+
 const lite = replaceExact(
   source,
   'const ENABLE_OBSIDIAN_FORMAT = true;',
@@ -77,46 +85,45 @@ minimal = replaceRegex(
   storageKeys(){`,
   'minimal languageDescription',
 );
-minimal = replaceRegex(
+minimal = replaceMarkedBlock(
   minimal,
-  /\n\s*formatTimes\(value\)\{[\s\S]*?\n\s*getSiteLabel\(\)\{/,
+  '/*__BOOKMARKLET_MINIMAL_FORMAT_HELPERS_START__*/',
+  '/*__BOOKMARKLET_MINIMAL_FORMAT_HELPERS_END__*/',
   `
+  formatTimes(value){
+    if (this.isJapanese()) return \`\${this.formatNumber(value)}回\`;
+    if (this.isChinese()) return \`\${this.formatNumber(value)}次\`;
+    return \`\${this.formatNumber(value)} times\`;
+  }
+
   formatPoints(value){
     if (this.isJapanese()) return \`\${this.formatNumber(value)}点\`;
     if (this.isChinese()) return \`\${this.formatNumber(value)}分\`;
     return \`\${this.formatNumber(value)} pts\`;
   }
 
-  getSiteLabel(){`,
-  'minimal format helpers',
-);
-minimal = replaceRegex(
-  minimal,
-  /\n\s*getSiteLabel\(\)\{[\s\S]*?\n\s*languageLabel\(lang\)\{/,
-  `
+  yesNo(value){
+    if (this.isJapanese()) return value ? 'はい' : 'いいえ';
+    if (this.isChinese()) return value ? '是' : '否';
+    return value ? 'Yes' : 'No';
+  }
+
   getSiteLabel(){
     return this.adapter.id==='generic'?(this.isJapanese()?'汎用':this.isChinese()?'通用':'Generic'):this.adapter.label;
   }
-
-  languageLabel(lang){`,
-  'minimal site label',
+  `,
+  'minimal format/site helpers',
 );
-minimal = replaceRegex(
+minimal = replaceMarkedBlock(
   minimal,
-  /\n\s*roleLabel\(role\)\{[\s\S]*?\n\s*yamlValue\(v\)\{/,
+  '/*__BOOKMARKLET_MINIMAL_ROLE_LABEL_START__*/',
+  '/*__BOOKMARKLET_MINIMAL_ROLE_LABEL_END__*/',
   `
   roleLabel(role){
     return role==='User'?(this.isJapanese()?'あなた':this.isChinese()?'你':'You'):role==='Model'?'AI':role==='Tool'?(this.isJapanese()?'ツール':this.isChinese()?'工具':'Tool'):(this.isJapanese()?'不明':this.isChinese()?'未知':'Unknown');
   }
-
-  yamlValue(v){`,
+  `,
   'minimal roleLabel',
-);
-minimal = removeBetween(
-  minimal,
-  "  buildQualityDetailText(quality){",
-  "  formatOutput(messages, quality, diff, preset=this.config.preset){",
-  'quality and preview helpers',
 );
 minimal = removeBetween(
   minimal,
@@ -124,43 +131,10 @@ minimal = removeBetween(
   "\n\n    let out = '';",
   'JSON output branch',
 );
-minimal = removeBetween(
+minimal = replaceMarkedBlock(
   minimal,
-  "      const previewData = this.buildOutputPreviewText(output);\n\n",
-  "      // 保存予定ファイル名\n",
-  'preview and detail dialog blocks',
-);
-minimal = removeBetween(
-  minimal,
-  "      // 手動コピー欄\n",
-  "      const footer = Utils.el('div',{style:`",
-  'manual copy dialog block',
-);
-minimal = replaceExact(
-  minimal,
-  `          }catch{
-            Utils.toast(this.text('コピーできなかったため、ファイル保存に切り替えます。', 'Clipboard copy failed, switching to file save.', '复制到剪贴板失败，改为保存文件。'), 'warn', 3200);
-            const ok = this.downloadFile(currentFileName, output);
-            if (ok){
-              await finalizeWithState({action:'done_file', saveState:'file'}, this.text('ファイル保存済み', 'Saved as file', '已保存为文件'));
-            }else{
-              setSaveState(this.text('コピー/保存に失敗', 'Copy/save failed', '复制/保存失败'));
-              Utils.toast(this.text('保存に失敗しました。', 'Save failed.', '保存失败。'), 'error', 2200);
-              finish({action:'done_fail', saveState:'failed'});
-            }
-          }`,
-  `          }catch{
-            try{
-              window.prompt(this.text('コピーできなかったため、この欄から手動でコピーしてください。', 'Copy failed. Copy the text manually from this prompt.', '复制失败。请从这个输入框手动复制文本。'), output);
-            }catch{
-              Utils.toast(this.text('コピーできませんでした。保存（ファイル）を使ってください。', 'Copy failed. Use Save file instead.', '复制失败。请改用保存文件。'),'warn', 3200);
-            }
-          }`,
-  'minimal clipboard prompt fallback',
-);
-minimal = replaceRegex(
-  minimal,
-  /\n\s*async showConfigDialog\(\)\{[\s\S]*?\n\s*qualitySummary\(quality, diff\)\{/,
+  '/*__BOOKMARKLET_MINIMAL_DIALOGS_START__*/',
+  '/*__BOOKMARKLET_MINIMAL_DIALOGS_END__*/',
   `
   async showConfigDialog(){
     return new Promise(resolve=>{
@@ -295,35 +269,81 @@ minimal = replaceRegex(
     return this.text('前回との差が大きい', 'large delta from previous', '与上一次差异较大');
   }
 
-  qualitySummary(quality, diff){`,
+  compactDialogText(key){
+    const table = {
+      title: this.text('保存前の確認', 'Review before saving', '保存确认'),
+      cancel: this.text('中止', 'Cancel', '取消'),
+      careful_rerun: this.text('ていねいに再実行', 'Careful rerun', '细致重试'),
+      copy: this.text('クリップボードにコピー', 'Copy to clipboard', '复制'),
+      save: this.text('保存', 'Save file', '保存'),
+      copied: this.text('コピーしました。', 'Copied.', '已复制。'),
+      copy_failed_save: this.text('コピー失敗。保存へ切り替えます。', 'Copy failed. Saving file.', '复制失败。改为保存文件。')
+    };
+    return table[key] || '';
+  }
+
+  compactResultDialogLines(messages, summary, diff, resultPreset){
+    return [
+      this.isJapanese()
+        ? \`判定: \${summary.label}（\${this.formatPoints(summary.score)}）\`
+        : this.isChinese()
+        ? \`状态: \${summary.label}（\${this.formatPoints(summary.score)}）\`
+        : \`Status: \${summary.label} (\${this.formatPoints(summary.score)})\`,
+      summary.hint,
+      summary.diffLine || this.comparisonBaseLabel(diff),
+      this.isJapanese()
+        ? \`件数: \${messages.length}件 / 速度: \${this.getPresetLabelFor(resultPreset)} / 形式: \${this.getFormatLabel()}\`
+        : this.isChinese()
+        ? \`消息: \${messages.length} / 模式: \${this.getPresetLabelFor(resultPreset)} / 格式: \${this.getFormatLabel()}\`
+        : \`Messages: \${messages.length} / Mode: \${this.getPresetLabelFor(resultPreset)} / Format: \${this.getFormatLabel()}\`
+    ];
+  }
+  `,
   'compact config and busy dialogs',
 );
 
 let unifiedFirefox = minimal;
 unifiedFirefox = replaceRegex(
   unifiedFirefox,
-  /\n\s*buildResultSnapshotSummaryLines\(snapshot\)\{[\s\S]*?\n\s*async resolveResultDialogChoice\(/,
+  /\n\s*formatTimes\(value\)\{[\s\S]*?\n\s*getSiteLabel\(\)\{[\s\S]*?\n\s*\}/,
   `
-  buildResultSnapshotSummaryLines(snapshot){
-    if (!snapshot) return [];
-    return [\`会話数: \${(snapshot.messages || []).length}件\`];
+  formatPoints(value){
+    if (this.isJapanese()) return \`\${this.formatNumber(value)}点\`;
+    if (this.isChinese()) return \`\${this.formatNumber(value)}分\`;
+    return \`\${this.formatNumber(value)} pts\`;
   }
 
-  async resolveResultDialogChoice(`,
+  getSiteLabel(){
+    return this.adapter.id==='generic'?(this.isJapanese()?'汎用':this.isChinese()?'通用':'Generic'):this.adapter.label;
+  }
+  `,
+  'unified Firefox compact format helpers',
+);
+unifiedFirefox = replaceMarkedBlock(
+  unifiedFirefox,
+  '/*__BOOKMARKLET_FIREFOX_SNAPSHOT_SUMMARY_START__*/',
+  '/*__BOOKMARKLET_FIREFOX_SNAPSHOT_SUMMARY_END__*/',
+  '',
   'result snapshot summary block',
 );
-unifiedFirefox = replaceRegex(
+unifiedFirefox = replaceMarkedBlock(
   unifiedFirefox,
-  /\n\s*qualitySummary\(quality, diff\)\{[\s\S]*?\n\s*getPresetLabel\(\)\{/,
+  '/*__BOOKMARKLET_FIREFOX_QUALITY_SUMMARY_START__*/',
+  '/*__BOOKMARKLET_FIREFOX_QUALITY_SUMMARY_END__*/',
   `
   qualitySummary(quality,diff){
     const q = quality || {status:'WARN', score:0};
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const label = this.qualityStatusText(q.status,true);
-    const color = q.status==='PASS' ? THEME.ok : q.status==='WARN' ? THEME.warn : THEME.bad;
     let hint = this.qualityHintText(q.status,true);
     let diffLine = '';
+    const abortedLast = diff?.lastAttempt?.status==='aborted' || diff?.lastAttempt?.status==='cancel';
+    if ((q.weakIdentityMessages||0) > 0 && !q.identityStable){
+      hint = ja ? '一部メッセージの識別が弱いです。' : zh ? '部分消息识别较弱。' : 'Some message identities are weak.';
+    }else if ((q.unknownMessages||0) > 0){
+      hint = ja ? '一部の話者判定が不明です。' : zh ? '部分说话者标签不明。' : 'Some speaker labels are unknown.';
+    }
     if (diff?.previous){
       const prev = diff.previous.count;
       const now = diff.now.count;
@@ -334,56 +354,60 @@ unifiedFirefox = replaceRegex(
         : zh
         ? \`\${diff.previousLabel || '上一次'}: \${prev}条 / 本次: \${now}条（差值 \${sign}\${delta}条）\`
         : \`\${diff.previousLabel || 'Previous'}: \${prev} / Now: \${now} (delta \${sign}\${delta})\`;
-      if (Math.abs(delta) > 1) hint = this.largeDeltaHintText(true);
+      if (Math.abs(delta) > 1){
+        hint = this.largeDeltaHintText(true);
+      }else if (diff.digestSame){
+        hint = ja ? '前回とほぼ同じです。' : zh ? '与上次几乎相同。' : 'Almost identical to previous.';
+      }
+    }else if (abortedLast){
+      diffLine = ja
+        ? '前回: 未保存で中断。比較基準はリセットされます。'
+        : zh
+        ? '上次: 未保存即中断。比较基准会重置。'
+        : 'Previous: aborted without saving. Comparison base reset.';
+      hint = ja
+        ? '以後は今回の保存結果を比較基準にします。'
+        : zh
+        ? '之后会以这次保存结果作为比较基准。'
+        : 'Future comparisons will use this saved result.';
     }
-    return {label, color, hint, diffLine, score:q.score, raw:q};
+    return {label, hint, diffLine, score:q.score, raw:q};
   }
-
-  getPresetLabel(){`,
+  `,
   'unified Firefox quality summary block',
 );
-unifiedFirefox = replaceRegex(
+unifiedFirefox = replaceMarkedBlock(
   unifiedFirefox,
-  /\n\s*buildExportMetadata\(title, messages, quality, diff, preset=this\.config\.preset\)\{[\s\S]*?\n\s*formatOutput\(messages, quality, diff, preset=this\.config\.preset\)\{/,
+  '/*__BOOKMARKLET_FIREFOX_METADATA_START__*/',
+  '/*__BOOKMARKLET_FIREFOX_METADATA_END__*/',
+  '',
+  'unified Firefox metadata helpers',
+);
+unifiedFirefox = replaceMarkedBlock(
+  unifiedFirefox,
+  '/*__BOOKMARKLET_FIREFOX_WARNINGS_START__*/',
+  '/*__BOOKMARKLET_FIREFOX_WARNINGS_END__*/',
   `
   warningSummary({quality, diff}){
     const q = quality || {status:'WARN'};
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const parts = [];
+    if (!diff?.previous){
+      if (diff?.lastAttempt?.status==='aborted' || diff?.lastAttempt?.status==='cancel'){
+        parts.push(ja ? '前回未保存で中断' : zh ? '上次未保存即中断' : 'previous run aborted before saving');
+      }else{
+        parts.push(ja ? '前回データなし' : zh ? '无上次数据' : 'no previous data');
+      }
+    }
     if (q.status!=='PASS'){
       const statusText = this.qualityStatusText(q.status,true);
       parts.push(ja || zh ? statusText : statusText.toLowerCase());
     }
-    if (diff?.previous){
-      const diffAbs = Math.abs(diff.diff || 0);
-      if (diffAbs > 1) parts.push(this.largeDeltaLabelText());
+    if (diff?.previous && Math.abs(diff.diff || 0) > 1){
+      parts.push(this.largeDeltaLabelText());
     }
-    const text = parts.length ? parts.join(' / ') : (ja ? 'なし' : zh ? '无' : 'none');
-    return {hasWarning: parts.length > 0, text};
-  }
-
-  compactSummaryLines(messages, quality, diff, savedState='未保存'){
-    const ja = this.isJapanese();
-    const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-    const delta = diff?.diff || 0;
-    const diffLine = diff?.previous
-      ? (ja ? \`前回比: \${delta>0?'+':''}\${delta}件\` : zh ? \`与上次相比: \${delta>0?'+':''}\${delta}条\` : \`Delta: \${delta>0?'+':''}\${delta}\`)
-      : (ja ? '前回比: なし' : zh ? '与上次相比: 无' : 'Delta: none');
-    return ja
-      ? [\`抽出件数: \${messages.length}件\`, \`保存状態: \${savedState}\`, diffLine]
-      : zh
-      ? [\`提取: \${messages.length}条\`, \`状态: \${savedState}\`, diffLine]
-      : [\`Messages: \${messages.length}\`, \`Saved state: \${savedState}\`, diffLine];
-  }
-
-  lastAttemptStatusLabel(){
-    const {previous} = this.loadRunMeta();
-    return this.isJapanese()
-      ? \`最終保存: \${Number.isFinite(previous?.count) ? \`\${previous.count}件\` : 'なし'}\`
-      : (this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN')
-      ? \`上次: \${Number.isFinite(previous?.count) ? \`\${previous.count}条\` : '无'}\`
-      : \`Last saved: \${Number.isFinite(previous?.count) ? \`\${previous.count}\` : 'none'}\`;
+    return {hasWarning: parts.length > 0, text: parts.length ? Array.from(new Set(parts)).join(' / ') : (ja ? 'なし' : zh ? '无' : 'none')};
   }
 
   comparisonBaseLabel(diff){
@@ -397,112 +421,29 @@ unifiedFirefox = replaceRegex(
       }
       return ja ? \`比較ベース: \${count}件\` : zh ? \`比较基准: \${count}条\` : \`Comparison base: \${count}\`;
     }
-    return ja ? '比較ベース: なし' : zh ? '比较基准: 无' : 'Comparison base: none';
+    return ja ? '比較ベース: なし（保存済みなし）' : zh ? '比较基准: 无（没有已保存结果）' : 'Comparison base: none (no saved result)';
   }
 
-  async confirmRerunDialog(mode='normal'){
+  async confirmRerunDialog(mode='careful'){
     const ja = this.isJapanese();
     const zh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
     const label = mode==='careful' ? (ja ? 'ていねいに再実行' : zh ? '细致重试' : 'Careful rerun') : (ja ? '再実行' : zh ? '重试' : 'Rerun');
-    return window.confirm(ja ? \`\${label}しますか？\\n現在結果を保持して再取得します。\` : zh ? \`\${label}吗？\\n保留当前结果并重试。\` : \`\${label}?\\nKeep the current result and run again.\`);
+    return window.confirm(ja ? \`\${label}しますか？\\n現在の結果を保持して再取得します。\` : zh ? \`\${label}吗？\\n保留当前结果并重试。\` : \`\${label}?\\nKeep the current result and run again.\`);
   }
-
-  makeFileName(title){
-    const base = Utils.filenameSafe(title);
-    const d = new Date();
-    const pad=n=>String(n).padStart(2,'0');
-    const stamp = \`\${d.getFullYear()}-\${pad(d.getMonth()+1)}-\${pad(d.getDate())}_\${pad(d.getHours())}\${pad(d.getMinutes())}\`;
-    return \`\${stamp}_\${base}.\${this.getFormatDef().ext}\`;
-  }
-
-  formatOutput(messages, quality, diff, preset=this.config.preset){`,
-  'unified Firefox compact export/output helpers',
+  `,
+  'unified Firefox compact warning and comparison helpers',
 );
-unifiedFirefox = replaceRegex(
+unifiedFirefox = replaceMarkedBlock(
   unifiedFirefox,
-  /\n\s*async showResultDialog\(messages, quality, options=\{\}\)\{[\s\S]*?\n\s*async runOnce\(\{skipConfig=false, presetOverride=null\}=\{\}\)\{/,
-  `
-  async showResultDialog(messages, quality, options={}){
-    return new Promise(resolve=>{
-      const isJa = this.isJapanese();
-      const isZh = this.isChinese ? this.isChinese() : this.getLang&&this.getLang()==='zh-CN';
-      const ui = isJa
-        ? ['保存確認','中止','再実行','コピー','保存','コピー済み。','コピー失敗。保存します。','コピー失敗。手動コピーしてください。','コピー/保存失敗。']
-        : isZh
-        ? ['保存确认','取消','重试','复制','保存','已复制。','复制失败，改为保存。','复制失败，请手动复制。','复制/保存失败。']
-        : ['Save review','Cancel','Rerun','Copy','Save','Copied.','Copy failed. Saving file.','Copy failed. Copy here.','Copy/save failed.'];
-      const alternateSnapshot = options?.alternateSnapshot || null;
-      const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');
-      const resultPreset = options?.preset || this.config.preset;
-      const diff = this.diffInfo(messages, alternateSnapshot);
-      const summary = this.qualitySummary(quality, diff);
-      const {fileName, output} = this.formatOutput(messages, quality, diff, resultPreset);
-      const lines = [
-        isJa ? \`判定: \${summary.label}（\${this.formatPoints(summary.score)}）\` : isZh ? \`状态: \${summary.label}（\${this.formatPoints(summary.score)}）\` : \`Status: \${summary.label} (\${this.formatPoints(summary.score)})\`,
-        summary.hint,
-        summary.diffLine || this.comparisonBaseLabel(diff),
-        isJa ? \`件数: \${messages.length}件 / \${this.getPresetLabelFor(resultPreset)} / \${this.getFormatLabel()}\` : isZh ? \`消息: \${messages.length} / \${this.getPresetLabelFor(resultPreset)} / \${this.getFormatLabel()}\` : \`Msgs: \${messages.length} / \${this.getPresetLabelFor(resultPreset)} / \${this.getFormatLabel()}\`
-      ];
-
-      const ov = this.overlay();
-      const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
-      const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
-      body.appendChild(Utils.el('div',{text:ui[0],style:'font-size:20px;line-height:1.35;font-weight:700;'}));
-      for (const line of lines){
-        body.appendChild(Utils.el('div',{text:line,style:\`font-size:14px;line-height:1.6;color:\${THEME.fg};font-weight:500;\`}));
-      }
-
-      const footer = Utils.el('div',{style:\`padding:14px 18px;background:\${THEME.surface};border-top:1px solid \${THEME.border};display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;\`});
-      const finish=(action)=>{
-        try{ ov.remove(); }catch{}
-        resolve(action);
-      };
-
-      const footerButtons = [
-        this.btn(ui[1],'subtle', ()=>finish({action:'cancel'})),
-        alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
-        this.btn(ui[2],'secondary', async ()=>{
-          if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
-        }),
-        this.btn(ui[3],'secondary', async ()=>{
-          try{
-            await navigator.clipboard.writeText(output);
-            Utils.toast(ui[5],'success');
-            finish({action:'done_clipboard', saveState:'clipboard'});
-          }catch{
-            Utils.toast(ui[6],'warn', 3200);
-            const ok = this.downloadFile(fileName, output);
-            if (ok){
-              finish({action:'done_file', saveState:'file'});
-            }else{
-              try{
-                window.prompt(ui[7], output);
-              }catch{
-                Utils.toast(ui[8],'warn', 3200);
-              }
-            }
-          }
-        }),
-        this.btn(ui[4],'primary', ()=>{
-          const ok = this.downloadFile(fileName, output);
-          finish(ok ? {action:'done_file', saveState:'file'} : {action:'done_fail', saveState:'failed'});
-        })
-      ].filter(Boolean);
-
-      footer.append(...footerButtons);
-
-      modal.append(body, footer);
-      ov.appendChild(modal);
-      document.body.appendChild(ov);
-    });
-  }
-
-  async runOnce({skipConfig=false, presetOverride=null}={}){`,
-  'unified Firefox compact result dialog',
+  '/*__BOOKMARKLET_FIREFOX_AUX_OUTPUT_START__*/',
+  '/*__BOOKMARKLET_FIREFOX_AUX_OUTPUT_END__*/',
+  '',
+  'unified Firefox aux output helpers',
 );
-unifiedFirefox = replaceRegex(
+unifiedFirefox = replaceMarkedBlock(
   unifiedFirefox,
-  /\n\s*formatOutput\(messages, quality, diff, preset=this\.config\.preset\)\{[\s\S]*?\n\s*downloadFile\(fileName, content\)\{/,
+  '/*__BOOKMARKLET_FIREFOX_OUTPUT_DIALOG_START__*/',
+  '/*__BOOKMARKLET_FIREFOX_OUTPUT_DIALOG_END__*/',
   `
   formatOutput(messages, quality, diff, preset=this.config.preset){
     const title = this.adapter.getTitle();
@@ -543,17 +484,100 @@ unifiedFirefox = replaceRegex(
     return {fileName:this.makeFileName(title), output: out.trim()+'\\n'};
   }
 
-  downloadFile(fileName, content){`,
-  'unified Firefox compact formatOutput body',
-);
-unifiedFirefox = replaceRegex(
-  unifiedFirefox,
-  /\n\s*yamlValue\(v\)\{[\s\S]*?\n\s*warningSummary\(\{quality, diff\}\)\{/,
-  `
-  warningSummary({quality, diff}){`,
-  'unified Firefox removes yaml helpers',
-);
+  downloadFile(fileName, content){
+    try{
+      const type = this.getFormatDef().mime;
+      const blob = new Blob([content], {type});
+      const url = URL.createObjectURL(blob);
+      const a = Utils.el('a',{href:url,download:fileName});
+      a.style.display='none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ try{URL.revokeObjectURL(url);}catch{} try{a.remove();}catch{} }, 12000);
+      return true;
+    }catch{
+      return false;
+    }
+  }
 
+  async showResultDialog(messages, quality, options={}){
+    return new Promise(resolve=>{
+      const alternateSnapshot = options?.alternateSnapshot || null;
+      const alternateButtonLabel = options?.alternateButtonLabel || this.text('前回結果', 'Previous result', '上一次结果');
+      const resultPreset = options?.preset || this.config.preset;
+      const diff = this.diffInfo(messages, alternateSnapshot);
+      const summary = this.qualitySummary(quality, diff);
+      const {fileName, output} = this.formatOutput(messages, quality, diff, resultPreset);
+      const manualHint = this.text('保存失敗。下から手動コピーしてください。', 'Save failed. Copy below.', '保存失败。请从下方复制。');
+
+      const ov = this.overlay();
+      const modal = Utils.el('div',{style:\`width:min(520px, calc(100vw - 24px));background:\${THEME.surface};border:1px solid \${THEME.border};border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.4);color:\${THEME.fg};\`});
+      const body = Utils.el('div',{style:\`padding:18px;display:grid;gap:10px;background:\${THEME.bg};\`});
+      body.appendChild(Utils.el('div',{text:this.compactDialogText('title'),style:'font-size:20px;line-height:1.35;font-weight:700;'}));
+      for (const line of this.compactResultDialogLines(messages, summary, diff, resultPreset)){
+        body.appendChild(Utils.el('div',{text:line,style:\`font-size:14px;line-height:1.6;color:\${THEME.fg};font-weight:500;\`}));
+      }
+      const manual = Utils.el('div',{style:\`display:none;border:1px solid \${THEME.border};border-radius:14px;background:\${THEME.surface};padding:12px 14px;\`});
+      manual.appendChild(Utils.el('div',{text:this.text('コピー欄', 'Copy area', '复制区'),style:'font-size:13px;line-height:1.5;font-weight:700;margin-bottom:8px;'}));
+      const manualText = Utils.el('textarea',{style:\`width:100%;min-height:180px;border-radius:12px;border:1px solid \${THEME.border};background:\${THEME.bg};color:\${THEME.fg};padding:10px 12px;font:500 14px/1.65 \${THEME.mono};\`});
+      manualText.value = output;
+      manual.appendChild(manualText);
+      body.appendChild(manual);
+
+      const footer = Utils.el('div',{style:\`padding:14px 18px;background:\${THEME.surface};border-top:1px solid \${THEME.border};display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;\`});
+      const finish=(action)=>{
+        try{ ov.remove(); }catch{}
+        resolve(action);
+      };
+      const showManual=(stateText)=>{
+        manual.style.display = 'block';
+        try{
+          manualText.focus();
+          manualText.select();
+          manualText.setSelectionRange(0, manualText.value.length);
+        }catch{}
+        Utils.toast(stateText || manualHint, 'warn', 3500);
+      };
+
+      footer.append(...[
+        this.btn(this.compactDialogText('cancel'),'subtle', ()=>finish({action:'cancel'})),
+        alternateSnapshot ? this.btn(alternateButtonLabel,'secondary', ()=>finish({action:'show_alternate_result'})) : null,
+        this.btn(this.compactDialogText('careful_rerun'),'secondary', async ()=>{
+          if (await this.confirmRerunDialog('careful')) finish({action:'rerun_careful'});
+        }),
+        this.btn(this.compactDialogText('copy'),'secondary', async ()=>{
+          try{
+            await navigator.clipboard.writeText(output);
+            Utils.toast(this.compactDialogText('copied'),'success');
+            finish({action:'done_clipboard', saveState:'clipboard'});
+          }catch{
+            Utils.toast(this.compactDialogText('copy_failed_save'),'warn', 3200);
+            const ok = this.downloadFile(fileName, output);
+            if (ok){
+              finish({action:'done_file', saveState:'file'});
+            }else{
+              showManual(manualHint);
+            }
+          }
+        }),
+        this.btn(this.compactDialogText('save'),'primary', ()=>{
+          const ok = this.downloadFile(fileName, output);
+          if (ok){
+            finish({action:'done_file', saveState:'file'});
+          }else{
+            showManual(manualHint);
+          }
+        })
+      ].filter(Boolean));
+
+      modal.append(body, footer);
+      ov.appendChild(modal);
+      document.body.appendChild(ov);
+    });
+  }
+  `,
+  'unified Firefox compact output and dialog block',
+);
 fs.writeFileSync(minimalBodyPath, `${minimal}\n`);
 fs.writeFileSync(unifiedFirefoxBodyPath, `${unifiedFirefox}\n`);
 NODE
@@ -587,11 +611,32 @@ const variants = [
 function buildVariantBookmarklet(minifiedBody, lang) {
   let body = String(minifiedBody || '').trim();
   if (body.startsWith('javascript:')) body = body.slice('javascript:'.length);
-  return `javascript:globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__=${JSON.stringify(lang)};${body}`;
+  const marker = JSON.stringify('__AI_CHAT_EXPORT_BUILD_FIXED_VARIANT_LANG__');
+  if (!body.includes(marker)) {
+    throw new Error(`Missing fixed-lang marker for ${lang}`);
+  }
+  body = body.replaceAll(marker, JSON.stringify(lang));
+  return `javascript:${body}`;
+}
+
+function assertVariantBookmarklet(bookmarklet, variant) {
+  if (bookmarklet.includes('globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__=')) {
+    throw new Error(`Global fixed-lang mutation leaked into ${variant.browser}.${variant.lang}`);
+  }
+  if (variant.browser === 'firefox' && bookmarklet.includes('window.prompt(')) {
+    throw new Error(`Prompt fallback leaked into ${variant.browser}.${variant.lang}`);
+  }
+  if (/[^\x00-\x7F]/.test(bookmarklet)) {
+    throw new Error(`Non-ASCII byte leaked into ${variant.browser}.${variant.lang}`);
+  }
+  if (variant.browser === 'firefox' && bookmarklet.length >= 64500) {
+    throw new Error(`Firefox bookmarklet exceeded size budget for ${variant.browser}.${variant.lang}: ${bookmarklet.length}`);
+  }
 }
 
 for (const variant of variants) {
   const bookmarklet = buildVariantBookmarklet(minifiedBodies[variant.browser], variant.lang);
+  assertVariantBookmarklet(bookmarklet, variant);
   for (const relativePath of [variant.fileName, variant.docsFileName]) {
     const dstPath = path.join(rootDir, relativePath);
     fs.writeFileSync(dstPath, `${bookmarklet}\n`);

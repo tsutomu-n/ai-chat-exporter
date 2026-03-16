@@ -26,7 +26,11 @@ function detectPreferredLang(){
   }
 }
 
+const BUILD_FIXED_VARIANT_LANG = '__AI_CHAT_EXPORT_BUILD_FIXED_VARIANT_LANG__';
+
 function detectFixedVariantLang(){
+  const buildFixedLang = normalizeLangId(BUILD_FIXED_VARIANT_LANG);
+  if (buildFixedLang) return buildFixedLang;
   try{
     return normalizeLangId(globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__);
   }catch{
@@ -1570,6 +1574,7 @@ class App{
     return `${this.formatNumber(value)}`;
   }
 
+  /*__BOOKMARKLET_MINIMAL_FORMAT_HELPERS_START__*/
   formatTimes(value){
     if (this.isJapanese()) return `${this.formatNumber(value)}回`;
     if (this.isChinese()) return `${this.formatNumber(value)}次`;
@@ -1594,6 +1599,7 @@ class App{
       : this.adapter.label;
   }
 
+  /*__BOOKMARKLET_MINIMAL_FORMAT_HELPERS_END__*/
   languageLabel(lang){
     const resolved = normalizeLangId(lang);
     if (resolved === 'ja') return '日本語';
@@ -1934,6 +1940,7 @@ class App{
     return preset==='fast'?'Fast' : preset==='careful'?'Careful' : 'Normal';
   }
 
+  /*__BOOKMARKLET_FIREFOX_SNAPSHOT_SUMMARY_START__*/
   buildResultSnapshotSummaryLines(snapshot){
     if (!snapshot) return [];
     const count = this.formatCount((snapshot.messages || []).length);
@@ -1963,6 +1970,7 @@ class App{
     return lines;
   }
 
+  /*__BOOKMARKLET_FIREFOX_SNAPSHOT_SUMMARY_END__*/
   async resolveResultDialogChoice(primarySnapshot, alternateSnapshot=null){
     let current = primarySnapshot;
     let alternate = alternateSnapshot;
@@ -2077,6 +2085,7 @@ class App{
   }
 
   // ---- dialogs ----
+  /*__BOOKMARKLET_MINIMAL_DIALOGS_START__*/
   async showConfigDialog(){
     return new Promise(resolve=>{
       const isJa = this.isJapanese();
@@ -2371,6 +2380,8 @@ class App{
     ];
   }
 
+  /*__BOOKMARKLET_MINIMAL_DIALOGS_END__*/
+  /*__BOOKMARKLET_FIREFOX_QUALITY_SUMMARY_START__*/
   qualitySummary(quality, diff){
     // qualityが無いケースもある
     const q = quality || {status:'WARN', score:0};
@@ -2428,6 +2439,7 @@ class App{
     return {label, color, hint, diffLine, score:q.score, raw:q};
   }
 
+  /*__BOOKMARKLET_FIREFOX_QUALITY_SUMMARY_END__*/
   getPresetLabel(){
     return this.getPresetLabelFor(this.config.preset);
   }
@@ -2455,6 +2467,7 @@ class App{
     return this.getFormatId()==='txt' && !!this.config.txtHeader;
   }
 
+  /*__BOOKMARKLET_MINIMAL_ROLE_LABEL_START__*/
   roleLabel(role){
     if (role==='User') return this.isJapanese() ? 'あなた' : this.isChinese() ? '你' : 'You';
     if (role==='Model') return 'AI';
@@ -2462,12 +2475,14 @@ class App{
     return this.isJapanese() ? '不明' : this.isChinese() ? '未知' : 'Unknown';
   }
 
+  /*__BOOKMARKLET_MINIMAL_ROLE_LABEL_END__*/
   yamlValue(v){
     if (typeof v==='number' || typeof v==='boolean') return String(v);
     const s = (v===undefined || v===null) ? '' : String(v);
     return `"${s.replace(/\\/g,'\\\\').replace(/\"/g,'\\\"').replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/\t/g,'\\t')}"`;
   }
 
+  /*__BOOKMARKLET_FIREFOX_METADATA_START__*/
   buildExportMetadata(title, messages, quality, diff, preset=this.config.preset){
     const warning = this.warningSummary({quality, diff});
     return {
@@ -2497,6 +2512,8 @@ class App{
     ].join('\n');
   }
 
+  /*__BOOKMARKLET_FIREFOX_METADATA_END__*/
+  /*__BOOKMARKLET_FIREFOX_WARNINGS_START__*/
   warningSummary({quality, diff}){
     const q = quality || {status:'WARN',score:0};
     const qWarn = q.status!=='PASS';
@@ -2661,6 +2678,7 @@ class App{
     });
   }
 
+  /*__BOOKMARKLET_FIREFOX_WARNINGS_END__*/
   makeFileName(title){
     const base = Utils.filenameSafe(title);
     const d = new Date();
@@ -2669,6 +2687,7 @@ class App{
     return `${stamp}_${base}.${this.getFormatDef().ext}`;
   }
 
+  /*__BOOKMARKLET_FIREFOX_AUX_OUTPUT_START__*/
   normalizeDownloadFileName(raw, fallback){
     const ext = `.${this.getFormatDef().ext}`;
     const base = String(raw || '').trim().replace(/[\\/:*?"<>|]+/g,'_');
@@ -2829,6 +2848,8 @@ class App{
     return this.buildOutputPreviewText(output);
   }
 
+  /*__BOOKMARKLET_FIREFOX_AUX_OUTPUT_END__*/
+  /*__BOOKMARKLET_FIREFOX_OUTPUT_DIALOG_START__*/
   formatOutput(messages, quality, diff, preset=this.config.preset){
     const title = this.adapter.getTitle();
     const savedAt = Utils.formatDateJST(new Date());
@@ -3052,6 +3073,12 @@ class App{
       ta.value = output;
       const manBtns = Utils.el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;'});
       const selectAll = ()=>{ ta.focus(); ta.select(); try{ ta.setSelectionRange(0, ta.value.length);}catch{} };
+      const revealManualCopy = (message, stateText, level='warn', duration=3500) => {
+        manual.open = true;
+        selectAll();
+        if (stateText) setSaveState(stateText);
+        if (message) Utils.toast(message, level, duration);
+      };
       manBtns.append(
         this.btn(this.text('全選択', 'Select all', '全选'),'secondary', ()=>{ selectAll(); Utils.toast(this.text('全選択しました。Ctrl/Cmd+Cでコピーできます。', 'Selected all. Press Ctrl/Cmd+C to copy.', '已全选。请按 Ctrl/Cmd+C 复制。'), 'info'); }),
         this.btn(this.text('コピー（可能なら）', 'Copy from this area', '从这里复制'),'secondary', async ()=>{
@@ -3099,9 +3126,12 @@ class App{
             if (ok){
               await finalizeWithState({action:'done_file', saveState:'file'}, this.text('ファイル保存済み', 'Saved as file', '已保存为文件'));
             }else{
-              setSaveState(this.text('コピー/保存に失敗', 'Copy/save failed', '复制/保存失败'));
-              Utils.toast(this.text('保存に失敗しました。', 'Save failed.', '保存失败。'), 'error', 2200);
-              finish({action:'done_fail', saveState:'failed'});
+              revealManualCopy(
+                this.text('保存に失敗しました。手動コピー欄からコピーしてください。', 'Save failed. Copy from the manual area.', '保存失败。请从手动复制区域复制。'),
+                this.text('コピー/保存に失敗', 'Copy/save failed', '复制/保存失败'),
+                'error',
+                3200
+              );
             }
           }
         }),
@@ -3110,8 +3140,12 @@ class App{
           if (ok){
             finalizeWithState({action:'done_file', saveState:'file'}, this.text('ファイル保存済み', 'Saved as file', '已保存为文件'));
           }else{
-            setSaveState(this.text('保存失敗', 'Save failed', '保存失败'));
-            finish({action:'done_fail', saveState:'failed'});
+            revealManualCopy(
+              this.text('保存に失敗しました。手動コピー欄からコピーしてください。', 'Save failed. Copy from the manual area.', '保存失败。请从手动复制区域复制。'),
+              this.text('保存失敗', 'Save failed', '保存失败'),
+              'error',
+              3200
+            );
           }
         })
       ].filter(Boolean);
@@ -3123,6 +3157,7 @@ class App{
     });
   }
 
+  /*__BOOKMARKLET_FIREFOX_OUTPUT_DIALOG_END__*/
   async runOnce({skipConfig=false, presetOverride=null}={}){
     const proceed = skipConfig ? true : await this.showConfigDialog();
     if (!proceed) return {action:'cancel'};

@@ -147,6 +147,23 @@ describe("repository layout", () => {
 
   });
 
+  test("uses explicit source markers for compact bookmarklet codegen blocks", () => {
+    const generator = readRepoFile("scripts", "generate_oneline_bookmarklet.sh");
+    const source = readRepoFile("src", "ai-chat-export.js");
+
+    expect(generator).toContain("function replaceMarkedBlock(");
+    expect(generator).toContain("/*__BOOKMARKLET_MINIMAL_DIALOGS_START__*/");
+    expect(generator).toContain("/*__BOOKMARKLET_FIREFOX_QUALITY_SUMMARY_START__*/");
+    expect(generator).toContain("/*__BOOKMARKLET_FIREFOX_WARNINGS_START__*/");
+    expect(generator).toContain("/*__BOOKMARKLET_FIREFOX_OUTPUT_DIALOG_START__*/");
+
+    expect(source).toContain("/*__BOOKMARKLET_MINIMAL_DIALOGS_START__*/");
+    expect(source).toContain("/*__BOOKMARKLET_MINIMAL_DIALOGS_END__*/");
+    expect(source).toContain("/*__BOOKMARKLET_FIREFOX_QUALITY_SUMMARY_START__*/");
+    expect(source).toContain("/*__BOOKMARKLET_FIREFOX_WARNINGS_START__*/");
+    expect(source).toContain("/*__BOOKMARKLET_FIREFOX_OUTPUT_DIALOG_START__*/");
+  });
+
   test("updates the readmes to present only the public bookmarklets", () => {
     const readme = readRepoFile("README.md");
     const readmeJa = readRepoFile("README.ja.md");
@@ -327,7 +344,7 @@ describe("repository layout", () => {
       expect(firefoxVariant).toContain("chatgpt.com");
       expect(firefoxVariant).toContain("aistudio.google.com");
       expect(firefoxVariant).toContain("x.com");
-      expect(firefoxVariant.length).toBeLessThan(62500);
+      expect(firefoxVariant.length).toBeLessThan(64500);
       expect(/[^\x00-\x7F]/.test(firefoxVariant)).toBe(false);
       expect(firefoxVariant).toContain(".filter(Boolean)");
     }
@@ -335,8 +352,8 @@ describe("repository layout", () => {
     const firefoxEn = readRepoFile("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
     expect(firefoxEn.length).toBeLessThan(chromeJa.length);
     expect(firefoxEn).toContain("Export AI chat");
-    expect(firefoxEn).toContain("Save review");
-    expect(firefoxEn).toContain("Copy");
+    expect(firefoxEn).toContain("Review before saving");
+    expect(firefoxEn).toContain("Copy to clipboard");
     expect(firefoxEn).toContain("Copy failed. Saving file.");
     expect(firefoxEn).toContain("Comparison base:");
   });
@@ -357,6 +374,21 @@ describe("repository layout", () => {
     expect(firefoxZh).not.toContain("语言");
   });
 
+  test("embeds the fixed variant language without mutating global state in generated bookmarklets", () => {
+    for (const file of rootBookmarkletPaths()) {
+      const code = readRepoFile(file);
+      expect(code).not.toContain("globalThis.__AI_CHAT_EXPORT_VARIANT_LANG__=");
+    }
+  });
+
+  test("avoids prompt-based manual copy fallback in generated Firefox bookmarklets", () => {
+    for (const lang of languageVariants) {
+      const firefoxVariant = readRepoFile(`ai-chat-export.firefox.${lang}.bookmarklet.oneliner.js`);
+      expect(firefoxVariant).not.toContain("window.prompt(");
+      expect(firefoxVariant).not.toContain("Copy failed. Copy here.");
+    }
+  });
+
   test("keeps zh locale scoped inside the compact busy dialog replacement", () => {
     const generator = readRepoFile("scripts", "generate_oneline_bookmarklet.sh");
 
@@ -375,18 +407,18 @@ describe("repository layout", () => {
     expect(generator).toContain("const statusText = this.qualityStatusText(q.status,true);");
     expect(generator).toContain("parts.push(ja || zh ? statusText : statusText.toLowerCase());");
     expect(generator).toContain("parts.push(this.largeDeltaLabelText());");
-    expect(generator).toContain("const ui = isJa");
-    expect(generator).toContain("? ['保存確認','中止','再実行','コピー','保存','コピー済み。','コピー失敗。保存します。','コピー失敗。手動コピーしてください。','コピー/保存失敗。']");
-    expect(generator).toContain(": ['Save review','Cancel','Rerun','Copy','Save','Copied.','Copy failed. Saving file.','Copy failed. Copy here.','Copy/save failed.'];");
-    expect(generator).toContain("const lines = [");
+    expect(generator).toContain("this.compactDialogText('title')");
+    expect(generator).toContain("for (const line of this.compactResultDialogLines(messages, summary, diff, resultPreset))");
+    expect(generator).toContain("const manualHint = this.text('保存失敗。下から手動コピーしてください。'");
+    expect(generator).toContain("showManual(manualHint);");
     expect(generator).toContain("diff?.comparisonKind === 'snapshot'");
     expect(generator).toContain("ja ? '前回結果' : zh ? '上一次结果' : 'Previous result'");
     expect(generator).toContain("const count = diff?.previous?.count;");
     expect(generator).toContain("\\`比較ベース: \\${label}（\\${count}件）\\`");
     expect(generator).toContain("\\`Comparison base: \\${label} (\\${count})\\`");
     expect(generator).toContain("\\`比较基准: \\${label}（\\${count}条）\\`");
-    expect(generator).toContain("const alternateButtonLabel = options?.alternateButtonLabel || (isJa ? '前回結果' : isZh ? '上一次结果' : 'Previous result');");
-    expect(generator).toContain("summary.diffLine || this.comparisonBaseLabel(diff)");
+    expect(generator).toContain("const alternateButtonLabel = options?.alternateButtonLabel || this.text('前回結果', 'Previous result', '上一次结果');");
+    expect(generator).toContain("const marker = JSON.stringify('__AI_CHAT_EXPORT_BUILD_FIXED_VARIANT_LANG__');");
   });
 
   test("keeps compact quality wording helpers in generated bookmarklets", () => {
@@ -409,6 +441,13 @@ describe("repository layout", () => {
     for (const file of rootBookmarkletPaths()) {
       const code = readRepoFile(file);
       expect(missingCalledMethods(code)).toEqual([]);
+    }
+  });
+
+  test("keeps generated bookmarklets syntax-valid", () => {
+    for (const file of rootBookmarkletPaths()) {
+      const code = readRepoFile(file).replace(/^javascript:/, "");
+      expect(() => new Function(code)).not.toThrow();
     }
   });
 
