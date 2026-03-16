@@ -4,21 +4,28 @@
 
 ## Start with these files
 
-- `./ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - One-file version for Chrome / Chromium
-- `./ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - Smaller one-file version for Firefox
+- `./ai-chat-export.chrome.ja.bookmarklet.oneliner.js`
+  - Japanese variant for Chrome / Chromium
+- `./ai-chat-export.chrome.en.bookmarklet.oneliner.js`
+  - English variant for Chrome / Chromium
+- `./ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+  - Simplified Chinese variant for Chrome / Chromium
+- `./ai-chat-export.firefox.ja.bookmarklet.oneliner.js`
+  - Japanese variant for Firefox
+- `./ai-chat-export.firefox.en.bookmarklet.oneliner.js`
+  - English variant for Firefox
+- `./ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
+  - Simplified Chinese variant for Firefox
 
-This public repo mainly ships these two bookmarklet files.
-The distributed bookmarklets use a compact result screen and do not include the full save preview from the readable source UI. The Firefox build is smaller still so it stays within Firefox bookmark limits.
-The bookmarklet UI and output labels can be shown in Japanese, English, or Simplified Chinese.
+This public repo mainly ships these six bookmarklet files.
+The distributed bookmarklets use a compact result screen and do not include the full save preview from the readable source UI. Each file has a fixed language, and the Firefox builds are smaller still so they stay within Firefox bookmark limits.
 
 ## Basic usage
 
-1. Open `ai-chat-export.chrome.bookmarklet.oneliner.js` for Chrome / Chromium or `ai-chat-export.firefox.bookmarklet.oneliner.js` for Firefox
+1. Open the bookmarklet file that matches your browser and language
 2. Copy the whole file content into a bookmark URL field
 3. Run the bookmarklet on a supported conversation page
-4. Choose the UI language, run mode, and output format
+4. Choose the run mode and output format
 5. Review the quality status and save to file or clipboard
 
 ## Run modes
@@ -63,8 +70,12 @@ If clipboard write is blocked by the browser, the tool shows a manual copy area.
 
 ## What is under `docs/`
 
-- `ai-chat-export.chrome.bookmarklet.oneliner.js`
-- `ai-chat-export.firefox.bookmarklet.oneliner.js`
+- `ai-chat-export.chrome.ja.bookmarklet.oneliner.js`
+- `ai-chat-export.chrome.en.bookmarklet.oneliner.js`
+- `ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+- `ai-chat-export.firefox.ja.bookmarklet.oneliner.js`
+- `ai-chat-export.firefox.en.bookmarklet.oneliner.js`
+- `ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
 - `index.md`
 - `index.ja.md`
 - `index.zh-CN.md`
@@ -75,9 +86,9 @@ This `docs/` directory ships only the public bookmarklets and the usage guides.
 
 - `src/ai-chat-export.js`
   - Readable source
-- `ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - Chrome / Chromium distribution bookmarklet
-- `ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - Firefox distribution bookmarklet
+- `ai-chat-export.chrome.ja.bookmarklet.oneliner.js` / `ai-chat-export.chrome.en.bookmarklet.oneliner.js` / `ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+  - Chrome / Chromium distribution bookmarklets
+- `ai-chat-export.firefox.ja.bookmarklet.oneliner.js` / `ai-chat-export.firefox.en.bookmarklet.oneliner.js` / `ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
+  - Firefox distribution bookmarklets
 
 The distribution files are regenerated with `scripts/generate_oneline_bookmarklet.sh`.

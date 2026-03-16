@@ -25,17 +25,24 @@
 - 保存前显示质量检查
 - 支持保存到文件或复制到剪贴板
 - 在浏览器里记住模式和导出格式
-- UI 和导出标签可切换为日文 / 英文 / 简体中文
+- 提供日文 / 英文 / 简体中文三个独立语言版本的书签脚本
 
 ## 推荐文件
 
-- `ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - 适合 Chrome / Chromium 的单文件版本
-- `ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - 适合 Firefox 的更小单文件版本
-  - 结果界面更精简，更容易满足 Firefox 的书签长度限制
+- `ai-chat-export.chrome.ja.bookmarklet.oneliner.js`
+  - 适合 Chrome / Chromium 的日文版
+- `ai-chat-export.chrome.en.bookmarklet.oneliner.js`
+  - 适合 Chrome / Chromium 的英文版
+- `ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+  - 适合 Chrome / Chromium 的简体中文版
+- `ai-chat-export.firefox.ja.bookmarklet.oneliner.js`
+  - 适合 Firefox 的日文版
+- `ai-chat-export.firefox.en.bookmarklet.oneliner.js`
+  - 适合 Firefox 的英文版
+- `ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
+  - 适合 Firefox 的简体中文版
 
-当前发布的 bookmarklet 使用更精简的结果界面，不包含可读源码 UI 中那种完整的保存预览。Firefox 版会进一步压缩，以满足 Firefox 的书签长度限制。
+当前发布的 bookmarklet 使用更精简的结果界面，不包含可读源码 UI 中那种完整的保存预览。语言由文件固定，运行时只需要选择模式和保存格式。Firefox 版会进一步压缩，以满足 Firefox 的书签长度限制。
 
 ## 使用效果
 
@@ -59,10 +66,10 @@
 
 ## 最快使用方法
 
-1. Chrome / Chromium 使用 `ai-chat-export.chrome.bookmarklet.oneliner.js`，Firefox 使用 `ai-chat-export.firefox.bookmarklet.oneliner.js`
+1. 打开与你的浏览器和语言匹配的书签脚本文件
 2. 复制整个文件内容，粘贴到浏览器书签的 URL 栏
 3. 打开支持的网站对话页面并运行书签脚本
-4. 在对话框中选择界面语言、运行模式和保存格式
+4. 在对话框中选择运行模式和保存格式
 5. 查看质量检查后再保存
 
 ## 适合哪些场景
@@ -103,10 +110,10 @@
 
 ## 仓库结构
 
-- `ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - 面向 Chrome / Chromium 的 ASCII 单文件版本
-- `ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - 面向 Firefox 的 ASCII 更小单文件版本
+- `ai-chat-export.chrome.ja.bookmarklet.oneliner.js` / `ai-chat-export.chrome.en.bookmarklet.oneliner.js` / `ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+  - 面向 Chrome / Chromium 的 ASCII 发布版
+- `ai-chat-export.firefox.ja.bookmarklet.oneliner.js` / `ai-chat-export.firefox.en.bookmarklet.oneliner.js` / `ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
+  - 面向 Firefox 的 ASCII 更小发布版
 - `src/ai-chat-export.js`
   - 可读源码
 

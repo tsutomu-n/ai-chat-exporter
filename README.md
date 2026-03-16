@@ -25,17 +25,24 @@ This tool is built to collect the conversation as safely as possible and export 
 - Shows a quality check before saving
 - Can save to a file or copy to the clipboard
 - Remembers your mode and format in the browser
-- UI and output labels can be shown in Japanese, English, or Simplified Chinese
+- Ships separate Japanese, English, and Simplified Chinese bookmarklets
 
 ## Recommended files
 
-- `ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - One-file version for Chrome / Chromium
-- `ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - Smaller one-file version for Firefox
-  - Uses a compact result screen so it fits Firefox bookmark limits better
+- `ai-chat-export.chrome.ja.bookmarklet.oneliner.js`
+  - Japanese variant for Chrome / Chromium
+- `ai-chat-export.chrome.en.bookmarklet.oneliner.js`
+  - English variant for Chrome / Chromium
+- `ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+  - Simplified Chinese variant for Chrome / Chromium
+- `ai-chat-export.firefox.ja.bookmarklet.oneliner.js`
+  - Japanese variant for Firefox
+- `ai-chat-export.firefox.en.bookmarklet.oneliner.js`
+  - English variant for Firefox
+- `ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
+  - Simplified Chinese variant for Firefox
 
-The distributed bookmarklets use a compact result screen and do not include the full save preview from the readable source UI. The Firefox build is smaller still so it stays within Firefox bookmark limits.
+The distributed bookmarklets use a compact result screen and do not include the full save preview from the readable source UI. Language is fixed by file, so the dialog only asks for run mode and save format. The Firefox builds are smaller still so they stay within Firefox bookmark limits.
 
 ## How it looks
 
@@ -59,10 +66,10 @@ Even long conversations can be saved as readable Markdown.
 
 ## Quick start
 
-1. Open `ai-chat-export.chrome.bookmarklet.oneliner.js` for Chrome / Chromium or `ai-chat-export.firefox.bookmarklet.oneliner.js` for Firefox
+1. Open the bookmarklet file that matches your browser and language
 2. Copy the whole file content into a browser bookmark URL field
 3. Open a supported conversation page and run the bookmarklet
-4. Choose the UI language, run mode, and save format in the dialog
+4. Choose the run mode and save format in the dialog
 5. Review the quality check and save
 
 ## What it is good for
@@ -103,10 +110,10 @@ The tool shows `PASS` / `WARN` / `FAIL` before saving. If a long conversation re
 
 ## Repository layout
 
-- `ai-chat-export.chrome.bookmarklet.oneliner.js`
-  - ASCII-based one-file version for Chrome / Chromium
-- `ai-chat-export.firefox.bookmarklet.oneliner.js`
-  - ASCII-based smaller one-file version for Firefox
+- `ai-chat-export.chrome.ja.bookmarklet.oneliner.js` / `ai-chat-export.chrome.en.bookmarklet.oneliner.js` / `ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js`
+  - ASCII-based Chrome / Chromium distributions
+- `ai-chat-export.firefox.ja.bookmarklet.oneliner.js` / `ai-chat-export.firefox.en.bookmarklet.oneliner.js` / `ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js`
+  - ASCII-based smaller Firefox distributions
 - `src/ai-chat-export.js`
   - Readable source
 

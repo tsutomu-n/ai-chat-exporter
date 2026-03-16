@@ -114,8 +114,14 @@ describe("repository layout", () => {
     const readmeJa = readRepoFile("README.ja.md");
     const readmeZh = readRepoFile("README.zh-CN.md");
 
-    expect(readme).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
-    expect(readme).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.chrome.ja.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.chrome.en.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.firefox.ja.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
+    expect(readme).toContain("ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js");
+    expect(readme).not.toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(readme).not.toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
     expect(readme).not.toContain("ai-chat-export.bookmarklet.oneliner.js");
     expect(readme).not.toContain("ai-chat-export.unified.bookmarklet.oneliner.js");
     expect(readme).toContain("Chrome");
@@ -141,25 +147,26 @@ describe("repository layout", () => {
     expect(readme).toContain("quality check");
     expect(readme).toContain("clipboard");
     expect(readme).toContain("No browser extension is needed");
-    expect(readme).toContain("Japanese, English, or Simplified Chinese");
-    expect(readme).toContain("One-file version for Chrome / Chromium");
+    expect(readme).toContain("Ships separate Japanese, English, and Simplified Chinese bookmarklets");
     expect(readme).toContain("Remembers your mode and format in the browser");
     expect(readme).toContain("The distributed bookmarklets use a compact result screen");
     expect(readme).toContain("do not include the full save preview");
+    expect(readme).toContain("Language is fixed by file");
+    expect(readme).toContain("matches your browser and language");
 
     expect(readmeJa).toContain("## このツールの目的");
     expect(readmeJa).toContain("## 主な機能");
     expect(readmeJa).toContain("長い AI チャット");
     expect(readmeJa).toContain("品質判定");
     expect(readmeJa).toContain("クリップボード");
-    expect(readmeJa).toContain("日本語 / 英語 / 简体中文");
+    expect(readmeJa).toContain("日本語 / 英語 / 简体中文ごとの個別 bookmarklet");
 
     expect(readmeZh).toContain("# AI 聊天导出");
     expect(readmeZh).toContain("## 这个工具的用途");
     expect(readmeZh).toContain("## 主要功能");
     expect(readmeZh).toContain("质量检查");
     expect(readmeZh).toContain("剪贴板");
-    expect(readmeZh).toContain("日文 / 英文 / 简体中文");
+    expect(readmeZh).toContain("日文 / 英文 / 简体中文三个独立语言版本");
   });
 
   test("ships english and japanese public guides under docs", () => {
@@ -168,8 +175,14 @@ describe("repository layout", () => {
     const pageZh = readRepoFile("docs", "index.zh-CN.md");
 
     expect(page).toContain("# AI Chat Export Guide");
-    expect(page).toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
-    expect(page).toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.chrome.ja.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.chrome.en.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.chrome.zh-CN.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.firefox.ja.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.firefox.en.bookmarklet.oneliner.js");
+    expect(page).toContain("ai-chat-export.firefox.zh-CN.bookmarklet.oneliner.js");
+    expect(page).not.toContain("ai-chat-export.chrome.bookmarklet.oneliner.js");
+    expect(page).not.toContain("ai-chat-export.firefox.bookmarklet.oneliner.js");
     expect(page).toContain("src/ai-chat-export.js");
     expect(page).toContain("scripts/generate_oneline_bookmarklet.sh");
     expect(page).toContain("source");
@@ -203,11 +216,11 @@ describe("repository layout", () => {
     expect(page).toContain("WARN");
     expect(page).toContain("FAIL");
     expect(page).toContain("clipboard");
-    expect(page).toContain("Japanese, English, or Simplified Chinese");
-    expect(page).toContain("This public repo mainly ships these two bookmarklet files.");
+    expect(page).toContain("This public repo mainly ships these six bookmarklet files.");
     expect(page).toContain("Scrolls more and opens more hidden content.");
     expect(page).toContain("The distributed bookmarklets use a compact result screen");
     expect(page).toContain("do not include the full save preview");
+    expect(page).toContain("fixed language");
 
     expect(pageJa).toContain("# AIチャット書き出し 使い方ガイド");
     expect(pageJa).toContain("## 基本的な使い方");
@@ -215,7 +228,7 @@ describe("repository layout", () => {
     expect(pageJa).toContain("## 出力形式の違い");
     expect(pageJa).toContain("## 品質判定の見方");
     expect(pageJa).toContain("## 保存方法の違い");
-    expect(pageJa).toContain("日本語 / 英語 / 简体中文");
+    expect(pageJa).toContain("Firefox で使う简体中文版");
 
     expect(pageZh).toContain("# AI 聊天导出使用指南");
     expect(pageZh).toContain("## 基本用法");
@@ -223,7 +236,7 @@ describe("repository layout", () => {
     expect(pageZh).toContain("## 输出格式");
     expect(pageZh).toContain("## 质量状态");
     expect(pageZh).toContain("## 保存方式");
-    expect(pageZh).toContain("日文 / 英文 / 简体中文");
+    expect(pageZh).toContain("这个公开仓库主要提供这 6 个书签脚本文件");
   });
 
   test("keeps the docs bookmarklet asset synced with the root bookmarklet", () => {
